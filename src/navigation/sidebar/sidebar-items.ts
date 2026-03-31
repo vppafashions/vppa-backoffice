@@ -55,11 +55,31 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 3,
-    label: "Content",
+    label: "Hero Sections",
     items: [
       {
-        title: "Hero Sections",
-        url: "/dashboard/heroes",
+        title: "Homepage",
+        url: "/dashboard/heroes/homepage",
+        icon: Image,
+      },
+      {
+        title: "Velocity",
+        url: "/dashboard/heroes/velocity",
+        icon: Image,
+      },
+      {
+        title: "Presence",
+        url: "/dashboard/heroes/presence",
+        icon: Image,
+      },
+      {
+        title: "Power",
+        url: "/dashboard/heroes/power",
+        icon: Image,
+      },
+      {
+        title: "Attitude",
+        url: "/dashboard/heroes/attitude",
         icon: Image,
       },
     ],
