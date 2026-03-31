@@ -1,4 +1,4 @@
-import { Gauge, Layers, type LucideIcon, ReceiptText, ShoppingBag } from "lucide-react";
+import { Gauge, Image, Layers, type LucideIcon, ReceiptText, ShoppingBag } from "lucide-react";
 
 export interface NavSubItem {
   title: string;
@@ -55,6 +55,17 @@ export const sidebarItems: NavGroup[] = [
   },
   {
     id: 3,
+    label: "Content",
+    items: [
+      {
+        title: "Hero Sections",
+        url: "/dashboard/heroes",
+        icon: Image,
+      },
+    ],
+  },
+  {
+    id: 4,
     label: "Sales",
     items: [
       {

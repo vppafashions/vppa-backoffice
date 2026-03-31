@@ -34,6 +34,17 @@ export interface Order extends Models.Document {
   notes: string;
 }
 
+export interface Hero extends Models.Document {
+  sectionKey: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  image: string;
+  tagline: string;
+  ctaText: string;
+  ctaLink: string;
+}
+
 export interface OrderItem {
   productId: string;
   name: string;

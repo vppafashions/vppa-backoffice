@@ -13,6 +13,7 @@ export const COLLECTION_IDS = {
   products: "products",
   collections: "collections",
   orders: "orders",
+  heroes: "heroes",
 } as const;
 
 export const CLOUDINARY = {
