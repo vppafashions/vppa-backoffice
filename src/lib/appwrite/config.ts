@@ -14,6 +14,7 @@ export const COLLECTION_IDS = {
   collections: "collections",
   orders: "orders",
   heroes: "heroes",
+  invoices: "invoices",
 } as const;
 
 export const CLOUDINARY = {

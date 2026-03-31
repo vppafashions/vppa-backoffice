@@ -53,3 +53,42 @@ export interface OrderItem {
   size: string;
   color: string;
 }
+
+export interface InvoiceItem {
+  name: string;
+  quantity: number;
+  rate: number;
+  originalRate: number;
+  hsn: string;
+  gstPercent: number;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  total: number;
+}
+
+export interface Invoice extends Models.Document {
+  invoiceNumber: string;
+  invoiceDate: string;
+  orderNumber: string;
+  orderDate: string;
+  customerName: string;
+  customerAddress: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerPin: string;
+  customerState: string;
+  stateCode: string;
+  placeOfSupply: string;
+  items: string;
+  subtotal: number;
+  taxableAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  totalTax: number;
+  shippingAmount: number;
+  discount: number;
+  grandTotal: number;
+  status: "draft" | "sent" | "paid" | "cancelled";
+  modeOfTransport: string;
+}
