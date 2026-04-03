@@ -1,15 +1,22 @@
 import type { Models } from "appwrite";
 
+import type { CollectionSlug } from "./collection-slugs";
+
 export interface Product extends Models.Document {
   name: string;
+  itemCode: string;
+  hsnCode: string;
   description: string;
   price: number;
   originalPrice: number;
   category: string;
-  collectionSlug: string;
+  collectionSlug: CollectionSlug;
   images: string;
   sizes: string;
   colors: string;
+  stockQuantity: number;
+  displayOnMainPage: boolean;
+  displayOnCollectionPage: boolean;
   featured: boolean;
   inStock: boolean;
   slug: string;

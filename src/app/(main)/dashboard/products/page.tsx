@@ -11,29 +11,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadImage } from "@/lib/appwrite/cloudinary";
+import {
+  COLLECTION_SLUG_LABELS,
+  COLLECTION_SLUG_VALUES,
+  type CollectionSlug,
+  getCollectionSlugLabel,
+  isCollectionSlug,
+} from "@/lib/appwrite/collection-slugs";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
 import type { Product } from "@/lib/appwrite/types";
 
 interface ProductForm {
   name: string;
+  itemCode: string;
+  hsnCode: string;
   description: string;
   price: string;
   originalPrice: string;
   category: string;
-  collectionSlug: string;
+  collectionSlug: CollectionSlug | "";
   sizes: string;
   colors: string;
+  stockQuantity: string;
+  displayOnMainPage: boolean;
+  displayOnCollectionPage: boolean;
   featured: boolean;
-  inStock: boolean;
   slug: string;
 }
 
 const emptyForm: ProductForm = {
   name: "",
+  itemCode: "",
+  hsnCode: "",
   description: "",
   price: "",
   originalPrice: "",
@@ -41,8 +55,10 @@ const emptyForm: ProductForm = {
   collectionSlug: "",
   sizes: "",
   colors: "",
+  stockQuantity: "0",
+  displayOnMainPage: false,
+  displayOnCollectionPage: true,
   featured: false,
-  inStock: true,
   slug: "",
 };
 
@@ -85,15 +101,19 @@ export default function ProductsPage() {
     setEditingProduct(product);
     setForm({
       name: product.name,
+      itemCode: product.itemCode || "",
+      hsnCode: product.hsnCode || "",
       description: product.description || "",
       price: String(product.price),
       originalPrice: String(product.originalPrice || ""),
       category: product.category || "",
-      collectionSlug: product.collectionSlug || "",
+      collectionSlug: isCollectionSlug(product.collectionSlug) ? product.collectionSlug : "",
       sizes: product.sizes || "",
       colors: product.colors || "",
+      stockQuantity: String(product.stockQuantity ?? 0),
+      displayOnMainPage: product.displayOnMainPage ?? false,
+      displayOnCollectionPage: product.displayOnCollectionPage ?? true,
       featured: product.featured || false,
-      inStock: product.inStock !== false,
       slug: product.slug || "",
     });
     try {
@@ -129,14 +149,27 @@ export default function ProductsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.price) {
-      toast.error("Name and price are required");
+    if (!form.name || !form.itemCode || !form.hsnCode || !form.price || !form.collectionSlug) {
+      toast.error("Name, item code, HSN code, price, and collection are required");
+      return;
+    }
+
+    const stockQuantity = Number.parseInt(form.stockQuantity, 10);
+    if (Number.isNaN(stockQuantity) || stockQuantity < 0) {
+      toast.error("Stock quantity must be a valid non-negative number");
+      return;
+    }
+
+    if (!/^\d{4,8}$/.test(form.hsnCode.trim())) {
+      toast.error("HSN code must be 4 to 8 digits");
       return;
     }
     setSaving(true);
     try {
       const data = {
         name: form.name,
+        itemCode: form.itemCode.trim(),
+        hsnCode: form.hsnCode.trim(),
         description: form.description,
         price: Number.parseFloat(form.price),
         originalPrice: form.originalPrice ? Number.parseFloat(form.originalPrice) : 0,
@@ -145,8 +178,11 @@ export default function ProductsPage() {
         images: JSON.stringify(images),
         sizes: form.sizes,
         colors: form.colors,
+        stockQuantity,
+        displayOnMainPage: form.displayOnMainPage,
+        displayOnCollectionPage: form.displayOnCollectionPage,
         featured: form.featured,
-        inStock: form.inStock,
+        inStock: stockQuantity > 0,
         slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
       };
 
@@ -217,8 +253,13 @@ export default function ProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Item Code</TableHead>
+                  <TableHead>HSN</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Collection</TableHead>
+                  <TableHead>Home</TableHead>
+                  <TableHead>Collection Page</TableHead>
+                  <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -227,16 +268,29 @@ export default function ProductsPage() {
                 {products.map((product) => (
                   <TableRow key={product.$id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="font-mono text-xs uppercase">{product.itemCode}</TableCell>
+                    <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
                     <TableCell>{formatCurrency(product.price)}</TableCell>
                     <TableCell>
                       {product.collectionSlug ? (
-                        <Badge variant="outline">{product.collectionSlug}</Badge>
+                        <Badge variant="outline">{getCollectionSlugLabel(product.collectionSlug)}</Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {product.inStock !== false ? (
+                      <Badge variant={product.displayOnMainPage ? "default" : "secondary"}>
+                        {product.displayOnMainPage ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.displayOnCollectionPage ? "default" : "secondary"}>
+                        {product.displayOnCollectionPage ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{product.stockQuantity ?? 0}</TableCell>
+                    <TableCell>
+                      {(product.stockQuantity ?? 0) > 0 ? (
                         <Badge variant="default">In Stock</Badge>
                       ) : (
                         <Badge variant="secondary">Out of Stock</Badge>
@@ -273,10 +327,19 @@ export default function ProductsPage() {
             <DialogTitle>{editingProduct ? "Edit Product" : "New Product"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="itemCode">Item Code *</Label>
+                <Input
+                  id="itemCode"
+                  value={form.itemCode}
+                  placeholder="e.g. VPPA-001"
+                  onChange={(e) => setForm({ ...form, itemCode: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
@@ -320,7 +383,27 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hsnCode">HSN Code *</Label>
+                <Input
+                  id="hsnCode"
+                  inputMode="numeric"
+                  value={form.hsnCode}
+                  placeholder="e.g. 6109"
+                  onChange={(e) => setForm({ ...form, hsnCode: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stockQuantity">Stock Quantity *</Label>
+                <Input
+                  id="stockQuantity"
+                  type="number"
+                  min="0"
+                  value={form.stockQuantity}
+                  onChange={(e) => setForm({ ...form, stockQuantity: e.target.value })}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Input
@@ -331,12 +414,21 @@ export default function ProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="collectionSlug">Collection Slug</Label>
-                <Input
-                  id="collectionSlug"
-                  value={form.collectionSlug}
-                  placeholder="e.g. velocity, presence"
-                  onChange={(e) => setForm({ ...form, collectionSlug: e.target.value })}
-                />
+                <Select
+                  value={form.collectionSlug || undefined}
+                  onValueChange={(value) => setForm({ ...form, collectionSlug: value as CollectionSlug })}
+                >
+                  <SelectTrigger id="collectionSlug" className="w-full">
+                    <SelectValue placeholder="Select a collection" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COLLECTION_SLUG_VALUES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {COLLECTION_SLUG_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -361,7 +453,23 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-6">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="displayOnMainPage"
+                  checked={form.displayOnMainPage}
+                  onCheckedChange={(checked) => setForm({ ...form, displayOnMainPage: checked })}
+                />
+                <Label htmlFor="displayOnMainPage">Display on Main Page</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="displayOnCollectionPage"
+                  checked={form.displayOnCollectionPage}
+                  onCheckedChange={(checked) => setForm({ ...form, displayOnCollectionPage: checked })}
+                />
+                <Label htmlFor="displayOnCollectionPage">Display on Collection Page</Label>
+              </div>
               <div className="flex items-center gap-2">
                 <Switch
                   id="featured"
@@ -370,13 +478,8 @@ export default function ProductsPage() {
                 />
                 <Label htmlFor="featured">Featured</Label>
               </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="inStock"
-                  checked={form.inStock}
-                  onCheckedChange={(checked) => setForm({ ...form, inStock: checked })}
-                />
-                <Label htmlFor="inStock">In Stock</Label>
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <span>Stock status updates automatically from quantity</span>
               </div>
             </div>
 
