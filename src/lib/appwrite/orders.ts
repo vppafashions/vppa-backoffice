@@ -35,12 +35,24 @@ export async function getOrder(id: string) {
   }) as Promise<Order>;
 }
 
-export async function updateOrderStatus(id: string, status: Order["status"]) {
+export async function updateOrderStatus(id: string, status: Order["status"], currentTimeline?: string) {
+  // Parse existing timeline or start fresh
+  let timeline: Record<string, string> = {};
+  if (currentTimeline) {
+    try {
+      timeline = JSON.parse(currentTimeline);
+    } catch {
+      // ignore
+    }
+  }
+  // Set the timestamp for the new status
+  timeline[status] = new Date().toISOString();
+
   return dataProxy({
     action: "update",
     collectionId: "orders",
     documentId: id,
-    data: { status },
+    data: { status, statusTimeline: JSON.stringify(timeline) },
   }) as Promise<Order>;
 }
 

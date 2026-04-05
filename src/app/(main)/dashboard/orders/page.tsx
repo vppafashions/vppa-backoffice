@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getOrders, updateOrderStatus, updateOrderTracking } from "@/lib/appwrite/orders";
-import type { Order, OrderItem } from "@/lib/appwrite/types";
+import type { Order, OrderItem, StatusTimeline } from "@/lib/appwrite/types";
 
 const STATUS_COLORS: Record<Order["status"], string> = {
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -48,9 +48,18 @@ export default function OrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleStatusChange = async (orderId: string, status: Order["status"]) => {
+  const parseTimeline = (timelineStr?: string): StatusTimeline => {
+    if (!timelineStr) return {};
     try {
-      await updateOrderStatus(orderId, status);
+      return JSON.parse(timelineStr);
+    } catch {
+      return {};
+    }
+  };
+
+  const handleStatusChange = async (orderId: string, status: Order["status"], currentTimeline?: string) => {
+    try {
+      await updateOrderStatus(orderId, status, currentTimeline);
       toast.success(`Order status updated to ${status}`);
       fetchOrders();
     } catch (error) {
@@ -212,8 +221,14 @@ export default function OrdersPage() {
                 <Select
                   value={selectedOrder.status}
                   onValueChange={(value) => {
-                    handleStatusChange(selectedOrder.$id, value as Order["status"]);
-                    setSelectedOrder({ ...selectedOrder, status: value as Order["status"] });
+                    handleStatusChange(selectedOrder.$id, value as Order["status"], selectedOrder.statusTimeline);
+                    const timeline = parseTimeline(selectedOrder.statusTimeline);
+                    timeline[value] = new Date().toISOString();
+                    setSelectedOrder({
+                      ...selectedOrder,
+                      status: value as Order["status"],
+                      statusTimeline: JSON.stringify(timeline),
+                    });
                   }}
                 >
                   <SelectTrigger>
@@ -228,6 +243,49 @@ export default function OrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Status Timeline */}
+              {(() => {
+                const timeline = parseTimeline(selectedOrder.statusTimeline);
+                const steps: { key: Order["status"]; label: string }[] = [
+                  { key: "pending", label: "Order Placed" },
+                  { key: "confirmed", label: "Confirmed" },
+                  { key: "shipped", label: "Shipped" },
+                  { key: "delivered", label: "Delivered" },
+                ];
+                if (selectedOrder.status === "cancelled" || timeline.cancelled) {
+                  steps.push({ key: "cancelled", label: "Cancelled" });
+                }
+                const hasAnyTimestamp = Object.keys(timeline).length > 0;
+                if (!hasAnyTimestamp && selectedOrder.status === "pending") return null;
+                return (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Status Timeline</Label>
+                    <div className="space-y-1">
+                      {steps.map((step) => {
+                        const ts = timeline[step.key];
+                        const isCurrent = selectedOrder.status === step.key;
+                        return (
+                          <div
+                            key={step.key}
+                            className={`flex items-center justify-between rounded px-3 py-1.5 text-sm ${
+                              isCurrent ? "bg-primary/10 font-medium" : ts ? "bg-muted/50" : "text-muted-foreground/50"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`inline-block h-2 w-2 rounded-full ${ts ? "bg-primary" : "bg-muted-foreground/30"}`}
+                              />
+                              {step.label}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{ts ? formatDate(ts) : "—"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {selectedOrder.razorpayPaymentId && (
                 <div className="text-sm">
