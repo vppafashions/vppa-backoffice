@@ -5,12 +5,15 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 
 import { useRouter } from "next/navigation";
 
-import { ID, type Models } from "appwrite";
-
-import { account } from "@/lib/appwrite/config";
+interface User {
+  $id: string;
+  name: string;
+  email: string;
+  [key: string]: unknown;
+}
 
 interface AuthContextType {
-  user: Models.User<Models.Preferences> | null;
+  user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
@@ -20,14 +23,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const checkSession = useCallback(async () => {
     try {
-      const currentUser = await account.get();
-      setUser(currentUser);
+      const res = await fetch("/api/auth/session");
+      if (res.ok) {
+        const currentUser = await res.json();
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
     } catch {
       setUser(null);
     } finally {
@@ -40,42 +48,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkSession]);
 
   const login = async (email: string, password: string) => {
-    try {
-      await account.createEmailPasswordSession({ email, password });
-    } catch (err: unknown) {
-      // If session already active, delete it and retry once
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.toLowerCase().includes("session") || message.toLowerCase().includes("401")) {
-        try {
-          await account.deleteSession("current");
-        } catch {
-          // Ignore — session may not exist
-        }
-        await account.createEmailPasswordSession({ email, password });
-      } else {
-        throw err;
-      }
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Login failed");
     }
-    const currentUser = await account.get();
-    setUser(currentUser);
+
+    // Fetch user info after successful login
+    const sessionRes = await fetch("/api/auth/session");
+    if (sessionRes.ok) {
+      const currentUser = await sessionRes.json();
+      setUser(currentUser);
+    }
+
     router.push("/dashboard/overview");
   };
 
-  const register = async (email: string, password: string, name?: string) => {
-    await account.create({
-      userId: ID.unique(),
-      email,
-      password,
-      name,
-    });
-    await login(email, password);
+  const register = async (_email: string, _password: string, _name?: string) => {
+    throw new Error("Registration is not available. Please contact an administrator.");
   };
 
   const logout = async () => {
     try {
-      await account.deleteSession("current");
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch {
-      // Session may already be expired
+      // Ignore errors during logout
     }
     setUser(null);
     router.push("/auth/v1/login");
