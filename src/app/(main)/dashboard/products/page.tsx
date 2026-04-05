@@ -26,6 +26,19 @@ import {
 import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
 import type { Product } from "@/lib/appwrite/types";
 
+const PRODUCT_TYPES = [
+  "Hoodie",
+  "Sweatshirt",
+  "T-Shirt",
+  "Polo",
+  "Jacket",
+  "Shirt",
+  "Pants",
+  "Shorts",
+  "Cap",
+  "Accessory",
+] as const;
+
 interface ProductForm {
   name: string;
   itemCode: string;
@@ -42,6 +55,7 @@ interface ProductForm {
   displayOnCollectionPage: boolean;
   featured: boolean;
   slug: string;
+  productType: string;
 }
 
 const emptyForm: ProductForm = {
@@ -60,6 +74,7 @@ const emptyForm: ProductForm = {
   displayOnCollectionPage: true,
   featured: false,
   slug: "",
+  productType: "",
 };
 
 export default function ProductsPage() {
@@ -115,6 +130,7 @@ export default function ProductsPage() {
       displayOnCollectionPage: product.displayOnCollectionPage ?? true,
       featured: product.featured || false,
       slug: product.slug || "",
+      productType: product.productType || "",
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -154,6 +170,11 @@ export default function ProductsPage() {
       return;
     }
 
+    if (!form.productType) {
+      toast.error("Product type is required for SKU generation");
+      return;
+    }
+
     const stockQuantity = Number.parseInt(form.stockQuantity, 10);
     if (Number.isNaN(stockQuantity) || stockQuantity < 0) {
       toast.error("Stock quantity must be a valid non-negative number");
@@ -166,6 +187,24 @@ export default function ProductsPage() {
     }
     setSaving(true);
     try {
+      // Auto-generate SKU: VPPA-{Type}-{Color}-{Size}-{0001}
+      const firstColor = form.colors.split(",")[0]?.trim() || "NA";
+      const firstSize = form.sizes.split(",")[0]?.trim() || "NA";
+      const typeTag = form.productType.replace(/\s+/g, "-");
+
+      // Find next running number for this type prefix
+      const skuPrefix = `VPPA-${typeTag}-${firstColor}-${firstSize}-`.toUpperCase();
+      let maxNum = 0;
+      for (const p of products) {
+        const pSku = (p.sku || "").toUpperCase();
+        if (pSku.startsWith(skuPrefix)) {
+          const numPart = pSku.slice(skuPrefix.length);
+          const parsed = Number.parseInt(numPart, 10);
+          if (!Number.isNaN(parsed) && parsed > maxNum) maxNum = parsed;
+        }
+      }
+      const skuToUse = editingProduct?.sku ? editingProduct.sku : `${skuPrefix}${String(maxNum + 1).padStart(4, "0")}`;
+
       const data = {
         name: form.name,
         itemCode: form.itemCode.trim(),
@@ -184,6 +223,8 @@ export default function ProductsPage() {
         featured: form.featured,
         inStock: stockQuantity > 0,
         slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
+        productType: form.productType,
+        sku: skuToUse,
       };
 
       if (editingProduct) {
@@ -253,6 +294,8 @@ export default function ProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Item Code</TableHead>
                   <TableHead>HSN</TableHead>
                   <TableHead>Price</TableHead>
@@ -268,6 +311,8 @@ export default function ProductsPage() {
                 {products.map((product) => (
                   <TableRow key={product.$id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="font-mono text-xs uppercase">{product.sku || "—"}</TableCell>
+                    <TableCell>{product.productType || "—"}</TableCell>
                     <TableCell className="font-mono text-xs uppercase">{product.itemCode}</TableCell>
                     <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
                     <TableCell>{formatCurrency(product.price)}</TableCell>
@@ -333,6 +378,24 @@ export default function ProductsPage() {
                 <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="productType">Product Type *</Label>
+                <Select
+                  value={form.productType || undefined}
+                  onValueChange={(value) => setForm({ ...form, productType: value })}
+                >
+                  <SelectTrigger id="productType" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRODUCT_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="itemCode">Item Code *</Label>
                 <Input
                   id="itemCode"
@@ -341,6 +404,9 @@ export default function ProductsPage() {
                   onChange={(e) => setForm({ ...form, itemCode: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
                 <Input
@@ -349,6 +415,15 @@ export default function ProductsPage() {
                   placeholder="auto-generated"
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>SKU</Label>
+                <Input
+                  value={editingProduct?.sku || "Auto-generated on save"}
+                  disabled
+                  className="font-mono text-xs uppercase"
+                />
+                <p className="text-muted-foreground text-xs">Format: VPPA-Type-Color-Size-0001</p>
               </div>
             </div>
 
