@@ -20,6 +20,8 @@ export interface Product extends Models.Document {
   featured: boolean;
   inStock: boolean;
   slug: string;
+  productType: string;
+  sku: string;
 }
 
 export interface Collection extends Models.Document {
