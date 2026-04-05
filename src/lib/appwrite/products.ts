@@ -1,34 +1,61 @@
 "use client";
 
-import { ID, Query } from "appwrite";
-
-import { COLLECTION_IDS, DATABASE_ID, databases } from "./config";
 import type { Product } from "./types";
 
+async function dataProxy(body: Record<string, unknown>) {
+  const res = await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Request failed");
+  }
+  return res.json();
+}
+
 export async function getProducts(limit = 100, offset = 0) {
-  const response = await databases.listDocuments<Product>(DATABASE_ID, COLLECTION_IDS.products, [
-    Query.limit(limit),
-    Query.offset(offset),
-    Query.orderDesc("$createdAt"),
-  ]);
-  return response;
+  return dataProxy({
+    action: "list",
+    collectionId: "products",
+    queries: [
+      { method: "limit", args: [limit] },
+      { method: "offset", args: [offset] },
+      { method: "orderDesc", args: ["$createdAt"] },
+    ],
+  });
 }
 
 export async function getProduct(id: string) {
-  const response = await databases.getDocument<Product>(DATABASE_ID, COLLECTION_IDS.products, id);
-  return response;
+  return dataProxy({
+    action: "get",
+    collectionId: "products",
+    documentId: id,
+  }) as Promise<Product>;
 }
 
 export async function createProduct(data: Record<string, unknown>) {
-  const response = await databases.createDocument(DATABASE_ID, COLLECTION_IDS.products, ID.unique(), data);
-  return response as unknown as Product;
+  return dataProxy({
+    action: "create",
+    collectionId: "products",
+    data,
+  }) as Promise<Product>;
 }
 
 export async function updateProduct(id: string, data: Record<string, unknown>) {
-  const response = await databases.updateDocument(DATABASE_ID, COLLECTION_IDS.products, id, data);
-  return response as unknown as Product;
+  return dataProxy({
+    action: "update",
+    collectionId: "products",
+    documentId: id,
+    data,
+  }) as Promise<Product>;
 }
 
 export async function deleteProduct(id: string) {
-  await databases.deleteDocument(DATABASE_ID, COLLECTION_IDS.products, id);
+  await dataProxy({
+    action: "delete",
+    collectionId: "products",
+    documentId: id,
+  });
 }

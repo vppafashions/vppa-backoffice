@@ -1,34 +1,61 @@
 "use client";
 
-import { ID, Query } from "appwrite";
-
-import { COLLECTION_IDS, DATABASE_ID, databases } from "./config";
 import type { Collection } from "./types";
 
+async function dataProxy(body: Record<string, unknown>) {
+  const res = await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Request failed");
+  }
+  return res.json();
+}
+
 export async function getCollections(limit = 100, offset = 0) {
-  const response = await databases.listDocuments<Collection>(DATABASE_ID, COLLECTION_IDS.collections, [
-    Query.limit(limit),
-    Query.offset(offset),
-    Query.orderDesc("$createdAt"),
-  ]);
-  return response;
+  return dataProxy({
+    action: "list",
+    collectionId: "collections",
+    queries: [
+      { method: "limit", args: [limit] },
+      { method: "offset", args: [offset] },
+      { method: "orderDesc", args: ["$createdAt"] },
+    ],
+  });
 }
 
 export async function getCollection(id: string) {
-  const response = await databases.getDocument<Collection>(DATABASE_ID, COLLECTION_IDS.collections, id);
-  return response;
+  return dataProxy({
+    action: "get",
+    collectionId: "collections",
+    documentId: id,
+  }) as Promise<Collection>;
 }
 
 export async function createCollection(data: Record<string, unknown>) {
-  const response = await databases.createDocument(DATABASE_ID, COLLECTION_IDS.collections, ID.unique(), data);
-  return response as unknown as Collection;
+  return dataProxy({
+    action: "create",
+    collectionId: "collections",
+    data,
+  }) as Promise<Collection>;
 }
 
 export async function updateCollection(id: string, data: Record<string, unknown>) {
-  const response = await databases.updateDocument(DATABASE_ID, COLLECTION_IDS.collections, id, data);
-  return response as unknown as Collection;
+  return dataProxy({
+    action: "update",
+    collectionId: "collections",
+    documentId: id,
+    data,
+  }) as Promise<Collection>;
 }
 
 export async function deleteCollection(id: string) {
-  await databases.deleteDocument(DATABASE_ID, COLLECTION_IDS.collections, id);
+  await dataProxy({
+    action: "delete",
+    collectionId: "collections",
+    documentId: id,
+  });
 }

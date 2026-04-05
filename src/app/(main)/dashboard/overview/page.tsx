@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { Query } from "appwrite";
 import { IndianRupee, Layers, Package, ShoppingCart, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { COLLECTION_IDS, DATABASE_ID, databases } from "@/lib/appwrite/config";
 
 interface Stats {
   totalProducts: number;
@@ -28,13 +26,20 @@ export default function OverviewPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
+        const fetchData = (body: Record<string, unknown>) =>
+          fetch("/api/data", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }).then((r) => r.json());
+
         const [products, collections, orders] = await Promise.all([
-          databases.listDocuments(DATABASE_ID, COLLECTION_IDS.products, [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, COLLECTION_IDS.collections, [Query.limit(1)]),
-          databases.listDocuments(DATABASE_ID, COLLECTION_IDS.orders, [Query.limit(100)]),
+          fetchData({ action: "list", collectionId: "products", queries: [{ method: "limit", args: [1] }] }),
+          fetchData({ action: "list", collectionId: "collections", queries: [{ method: "limit", args: [1] }] }),
+          fetchData({ action: "list", collectionId: "orders", queries: [{ method: "limit", args: [100] }] }),
         ]);
 
-        const revenue = orders.documents.reduce((sum, order) => {
+        const revenue = orders.documents.reduce((sum: number, order: Record<string, unknown>) => {
           const total = typeof order.total === "number" ? order.total : 0;
           return sum + total;
         }, 0);

@@ -1,34 +1,58 @@
 "use client";
 
-import { Query } from "appwrite";
-
-import { COLLECTION_IDS, DATABASE_ID, databases } from "./config";
 import type { Hero } from "./types";
 
+async function dataProxy(body: Record<string, unknown>) {
+  const res = await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Request failed");
+  }
+  return res.json();
+}
+
 export async function getHeroes(limit = 100, offset = 0) {
-  const response = await databases.listDocuments<Hero>(DATABASE_ID, COLLECTION_IDS.heroes, [
-    Query.limit(limit),
-    Query.offset(offset),
-    Query.orderAsc("$createdAt"),
-  ]);
-  return response;
+  return dataProxy({
+    action: "list",
+    collectionId: "heroes",
+    queries: [
+      { method: "limit", args: [limit] },
+      { method: "offset", args: [offset] },
+      { method: "orderAsc", args: ["$createdAt"] },
+    ],
+  });
 }
 
 export async function getHeroesByPrefix(prefix: string) {
-  const response = await databases.listDocuments<Hero>(DATABASE_ID, COLLECTION_IDS.heroes, [
-    Query.startsWith("sectionKey", prefix),
-    Query.limit(100),
-    Query.orderAsc("$createdAt"),
-  ]);
-  return response.documents as Hero[];
+  const result = await dataProxy({
+    action: "list",
+    collectionId: "heroes",
+    queries: [
+      { method: "startsWith", args: ["sectionKey", prefix] },
+      { method: "limit", args: [100] },
+      { method: "orderAsc", args: ["$createdAt"] },
+    ],
+  });
+  return result.documents as Hero[];
 }
 
 export async function getHero(id: string) {
-  const response = await databases.getDocument<Hero>(DATABASE_ID, COLLECTION_IDS.heroes, id);
-  return response;
+  return dataProxy({
+    action: "get",
+    collectionId: "heroes",
+    documentId: id,
+  }) as Promise<Hero>;
 }
 
 export async function updateHero(id: string, data: Record<string, unknown>) {
-  const response = await databases.updateDocument(DATABASE_ID, COLLECTION_IDS.heroes, id, data);
-  return response as unknown as Hero;
+  return dataProxy({
+    action: "update",
+    collectionId: "heroes",
+    documentId: id,
+    data,
+  }) as Promise<Hero>;
 }

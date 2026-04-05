@@ -1,43 +1,74 @@
 "use client";
 
-import { ID, Query } from "appwrite";
-
-import { COLLECTION_IDS, DATABASE_ID, databases } from "./config";
 import type { Invoice } from "./types";
 
+async function dataProxy(body: Record<string, unknown>) {
+  const res = await fetch("/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Request failed");
+  }
+  return res.json();
+}
+
 export async function getInvoices(limit = 100, offset = 0) {
-  const response = await databases.listDocuments<Invoice>(DATABASE_ID, COLLECTION_IDS.invoices, [
-    Query.limit(limit),
-    Query.offset(offset),
-    Query.orderDesc("$createdAt"),
-  ]);
-  return response;
+  return dataProxy({
+    action: "list",
+    collectionId: "invoices",
+    queries: [
+      { method: "limit", args: [limit] },
+      { method: "offset", args: [offset] },
+      { method: "orderDesc", args: ["$createdAt"] },
+    ],
+  });
 }
 
 export async function getInvoice(id: string) {
-  const response = await databases.getDocument<Invoice>(DATABASE_ID, COLLECTION_IDS.invoices, id);
-  return response;
+  return dataProxy({
+    action: "get",
+    collectionId: "invoices",
+    documentId: id,
+  }) as Promise<Invoice>;
 }
 
 export async function createInvoice(data: Record<string, unknown>) {
-  const response = await databases.createDocument(DATABASE_ID, COLLECTION_IDS.invoices, ID.unique(), data);
-  return response as unknown as Invoice;
+  return dataProxy({
+    action: "create",
+    collectionId: "invoices",
+    data,
+  }) as Promise<Invoice>;
 }
 
 export async function updateInvoice(id: string, data: Record<string, unknown>) {
-  const response = await databases.updateDocument(DATABASE_ID, COLLECTION_IDS.invoices, id, data);
-  return response as unknown as Invoice;
+  return dataProxy({
+    action: "update",
+    collectionId: "invoices",
+    documentId: id,
+    data,
+  }) as Promise<Invoice>;
 }
 
 export async function deleteInvoice(id: string) {
-  await databases.deleteDocument(DATABASE_ID, COLLECTION_IDS.invoices, id);
+  await dataProxy({
+    action: "delete",
+    collectionId: "invoices",
+    documentId: id,
+  });
 }
 
 export async function getNextInvoiceNumber(): Promise<string> {
-  const response = await databases.listDocuments<Invoice>(DATABASE_ID, COLLECTION_IDS.invoices, [
-    Query.orderDesc("$createdAt"),
-    Query.limit(1),
-  ]);
+  const response = await dataProxy({
+    action: "list",
+    collectionId: "invoices",
+    queries: [
+      { method: "orderDesc", args: ["$createdAt"] },
+      { method: "limit", args: [1] },
+    ],
+  });
   if (response.documents.length === 0) {
     return "1001";
   }
