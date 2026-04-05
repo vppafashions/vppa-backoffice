@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getOrders, updateOrderStatus } from "@/lib/appwrite/orders";
+import { getOrders, updateOrderStatus, updateOrderTracking } from "@/lib/appwrite/orders";
 import type { Order, OrderItem } from "@/lib/appwrite/types";
 
 const STATUS_COLORS: Record<Order["status"], string> = {
@@ -27,6 +28,9 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [courier, setCourier] = useState("");
+  const [savingTracking, setSavingTracking] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -133,6 +137,8 @@ export default function OrdersPage() {
                         variant="outline"
                         onClick={() => {
                           setSelectedOrder(order);
+                          setTrackingNumber(order.trackingNumber || "");
+                          setCourier(order.courier || "");
                           setDetailsOpen(true);
                         }}
                       >
@@ -221,6 +227,66 @@ export default function OrdersPage() {
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {selectedOrder.razorpayPaymentId && (
+                <div className="text-sm">
+                  <Label className="text-muted-foreground">Razorpay Payment ID</Label>
+                  <p className="font-mono text-xs">{selectedOrder.razorpayPaymentId}</p>
+                </div>
+              )}
+
+              <div className="space-y-3 rounded-lg border p-4">
+                <Label className="font-semibold">Shipping & Tracking</Label>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Courier</Label>
+                  <Select value={courier} onValueChange={setCourier}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select courier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BlueDart">BlueDart</SelectItem>
+                      <SelectItem value="DTDC">DTDC</SelectItem>
+                      <SelectItem value="Delhivery">Delhivery</SelectItem>
+                      <SelectItem value="FedEx">FedEx</SelectItem>
+                      <SelectItem value="DHL">DHL</SelectItem>
+                      <SelectItem value="India Post">India Post</SelectItem>
+                      <SelectItem value="Ekart">Ekart</SelectItem>
+                      <SelectItem value="Shadowfax">Shadowfax</SelectItem>
+                      <SelectItem value="Xpressbees">Xpressbees</SelectItem>
+                      <SelectItem value="Ecom Express">Ecom Express</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Tracking Number</Label>
+                  <Input
+                    placeholder="Enter tracking number"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={savingTracking || (!trackingNumber && !courier)}
+                  onClick={async () => {
+                    if (!selectedOrder) return;
+                    setSavingTracking(true);
+                    try {
+                      await updateOrderTracking(selectedOrder.$id, trackingNumber, courier);
+                      toast.success("Tracking info saved");
+                      setSelectedOrder({ ...selectedOrder, trackingNumber, courier });
+                      fetchOrders();
+                    } catch {
+                      toast.error("Failed to save tracking info");
+                    } finally {
+                      setSavingTracking(false);
+                    }
+                  }}
+                >
+                  {savingTracking ? "Saving..." : "Save Tracking Info"}
+                </Button>
               </div>
 
               {selectedOrder.notes && (

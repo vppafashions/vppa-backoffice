@@ -23,3 +23,11 @@ export async function updateOrderStatus(id: string, status: Order["status"]) {
   const response = await databases.updateDocument(DATABASE_ID, COLLECTION_IDS.orders, id, { status });
   return response as unknown as Order;
 }
+
+export async function updateOrderTracking(id: string, trackingNumber: string, courier: string) {
+  const response = await databases.updateDocument(DATABASE_ID, COLLECTION_IDS.orders, id, {
+    trackingNumber,
+    courier,
+  });
+  return response as unknown as Order;
+}

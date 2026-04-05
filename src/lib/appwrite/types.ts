@@ -32,6 +32,11 @@ export interface Order extends Models.Document {
   total: number;
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
   notes: string;
+  trackingNumber?: string;
+  courier?: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  userId?: string;
 }
 
 export interface Hero extends Models.Document {
