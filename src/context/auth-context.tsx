@@ -40,13 +40,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkSession]);
 
   const login = async (email: string, password: string) => {
-    // Delete any existing session first (e.g. from frontend Google login on same Appwrite project)
     try {
-      await account.deleteSession("current");
-    } catch {
-      // No active session — that's fine
+      await account.createEmailPasswordSession({ email, password });
+    } catch (err: unknown) {
+      // If session already active, delete it and retry once
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.toLowerCase().includes("session") || message.toLowerCase().includes("401")) {
+        try {
+          await account.deleteSession("current");
+        } catch {
+          // Ignore — session may not exist
+        }
+        await account.createEmailPasswordSession({ email, password });
+      } else {
+        throw err;
+      }
     }
-    await account.createEmailPasswordSession({ email, password });
     const currentUser = await account.get();
     setUser(currentUser);
     router.push("/dashboard/overview");
