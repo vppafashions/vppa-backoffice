@@ -40,6 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkSession]);
 
   const login = async (email: string, password: string) => {
+    // Delete any existing session first (e.g. from frontend Google login on same Appwrite project)
+    try {
+      await account.deleteSession("current");
+    } catch {
+      // No active session — that's fine
+    }
     await account.createEmailPasswordSession({ email, password });
     const currentUser = await account.get();
     setUser(currentUser);
