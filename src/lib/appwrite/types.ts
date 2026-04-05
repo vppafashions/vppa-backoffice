@@ -30,6 +30,15 @@ export interface Collection extends Models.Document {
   image: string;
 }
 
+export interface StatusTimeline {
+  [key: string]: string | undefined;
+  pending?: string;
+  confirmed?: string;
+  shipped?: string;
+  delivered?: string;
+  cancelled?: string;
+}
+
 export interface Order extends Models.Document {
   customerName: string;
   email: string;
@@ -44,6 +53,7 @@ export interface Order extends Models.Document {
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
   userId?: string;
+  statusTimeline?: string;
 }
 
 export interface Hero extends Models.Document {
