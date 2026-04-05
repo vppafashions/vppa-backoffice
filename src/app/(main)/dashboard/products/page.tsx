@@ -24,7 +24,7 @@ import {
   isCollectionSlug,
 } from "@/lib/appwrite/collection-slugs";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
-import type { Product } from "@/lib/appwrite/types";
+import type { Product, VariantInventoryItem } from "@/lib/appwrite/types";
 
 const PRODUCT_TYPES = [
   "Hoodie",
@@ -58,6 +58,43 @@ interface ProductForm {
   productType: string;
 }
 
+function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function buildVariantGrid(sizes: string, colors: string, existing: VariantInventoryItem[]): VariantInventoryItem[] {
+  const sizeList = sizes
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const colorList = colors
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  if (sizeList.length === 0 || colorList.length === 0) return existing;
+  const grid: VariantInventoryItem[] = [];
+  for (const size of sizeList) {
+    for (const color of colorList) {
+      const found = existing.find(
+        (v) => v.size.toLowerCase() === size.toLowerCase() && v.color.toLowerCase() === color.toLowerCase(),
+      );
+      grid.push({ size, color, stock: found?.stock ?? 0 });
+    }
+  }
+  return grid;
+}
+
+function totalVariantStock(variants: VariantInventoryItem[]): number {
+  return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+}
+
 const emptyForm: ProductForm = {
   name: "",
   itemCode: "",
@@ -88,6 +125,7 @@ export default function ProductsPage() {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [variantInventory, setVariantInventory] = useState<VariantInventoryItem[]>([]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -109,6 +147,7 @@ export default function ProductsPage() {
     setEditingProduct(null);
     setForm(emptyForm);
     setImages([]);
+    setVariantInventory([]);
     setDialogOpen(true);
   };
 
@@ -137,6 +176,7 @@ export default function ProductsPage() {
     } catch {
       setImages([]);
     }
+    setVariantInventory(parseVariantInventory(product.variantInventory));
     setDialogOpen(true);
   };
 
@@ -175,7 +215,8 @@ export default function ProductsPage() {
       return;
     }
 
-    const stockQuantity = Number.parseInt(form.stockQuantity, 10);
+    const hasVariants = variantInventory.length > 0;
+    const stockQuantity = hasVariants ? totalVariantStock(variantInventory) : Number.parseInt(form.stockQuantity, 10);
     if (Number.isNaN(stockQuantity) || stockQuantity < 0) {
       toast.error("Stock quantity must be a valid non-negative number");
       return;
@@ -225,6 +266,7 @@ export default function ProductsPage() {
         slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
         productType: form.productType,
         sku: skuToUse,
+        variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
       };
 
       if (editingProduct) {
@@ -527,6 +569,73 @@ export default function ProductsPage() {
                 />
               </div>
             </div>
+
+            {form.sizes && form.colors && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Variant Inventory (Size × Color)</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const grid = buildVariantGrid(form.sizes, form.colors, variantInventory);
+                      setVariantInventory(grid);
+                      const total = totalVariantStock(grid);
+                      setForm((prev) => ({ ...prev, stockQuantity: String(total) }));
+                    }}
+                  >
+                    Generate Grid
+                  </Button>
+                </div>
+                {variantInventory.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Size</TableHead>
+                          <TableHead>Color</TableHead>
+                          <TableHead className="w-32">Stock</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {variantInventory.map((v, idx) => (
+                          <TableRow key={`${v.size}-${v.color}`}>
+                            <TableCell className="font-medium">{v.size}</TableCell>
+                            <TableCell>{v.color}</TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                className="h-8 w-24"
+                                value={v.stock}
+                                onChange={(e) => {
+                                  const updated = [...variantInventory];
+                                  updated[idx] = { ...v, stock: Math.max(0, Number.parseInt(e.target.value, 10) || 0) };
+                                  setVariantInventory(updated);
+                                  const total = totalVariantStock(updated);
+                                  setForm((prev) => ({ ...prev, stockQuantity: String(total) }));
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell colSpan={2} className="font-semibold text-right">
+                            Total Stock
+                          </TableCell>
+                          <TableCell className="font-semibold">{totalVariantStock(variantInventory)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Click &quot;Generate Grid&quot; to create inventory slots for each size × color combination.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-2">
