@@ -23,6 +23,8 @@ export interface Product extends Models.Document {
   productType: string;
   sku: string;
   variantInventory: string;
+  fabricCare: string;
+  returnPolicy: string;
 }
 
 export interface VariantInventoryItem {

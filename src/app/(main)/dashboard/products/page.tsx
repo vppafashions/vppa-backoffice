@@ -56,6 +56,8 @@ interface ProductForm {
   featured: boolean;
   slug: string;
   productType: string;
+  fabricCare: string;
+  returnPolicy: string;
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -112,6 +114,8 @@ const emptyForm: ProductForm = {
   featured: false,
   slug: "",
   productType: "",
+  fabricCare: "",
+  returnPolicy: "",
 };
 
 export default function ProductsPage() {
@@ -170,6 +174,8 @@ export default function ProductsPage() {
       featured: product.featured || false,
       slug: product.slug || "",
       productType: product.productType || "",
+      fabricCare: product.fabricCare || "",
+      returnPolicy: product.returnPolicy || "",
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -267,6 +273,8 @@ export default function ProductsPage() {
         productType: form.productType,
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
+        fabricCare: form.fabricCare,
+        returnPolicy: form.returnPolicy,
       };
 
       if (editingProduct) {
@@ -475,6 +483,28 @@ export default function ProductsPage() {
                 id="description"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fabricCare">Fabric & Care</Label>
+              <Textarea
+                id="fabricCare"
+                value={form.fabricCare}
+                placeholder="e.g. 100% Cotton, Machine wash cold, Tumble dry low"
+                onChange={(e) => setForm({ ...form, fabricCare: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="returnPolicy">Return Policy</Label>
+              <Textarea
+                id="returnPolicy"
+                value={form.returnPolicy}
+                placeholder="e.g. 7-day easy returns, No questions asked"
+                onChange={(e) => setForm({ ...form, returnPolicy: e.target.value })}
                 rows={3}
               />
             </div>
