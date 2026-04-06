@@ -130,6 +130,8 @@ export default function ProductsPage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [variantInventory, setVariantInventory] = useState<VariantInventoryItem[]>([]);
+  const [colorImages, setColorImages] = useState<Record<string, string[]>>({});
+  const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -152,6 +154,7 @@ export default function ProductsPage() {
     setForm(emptyForm);
     setImages([]);
     setVariantInventory([]);
+    setColorImages({});
     setDialogOpen(true);
   };
 
@@ -183,6 +186,11 @@ export default function ProductsPage() {
       setImages([]);
     }
     setVariantInventory(parseVariantInventory(product.variantInventory));
+    try {
+      setColorImages(product.colorImages ? JSON.parse(product.colorImages) : {});
+    } catch {
+      setColorImages({});
+    }
     setDialogOpen(true);
   };
 
@@ -275,6 +283,7 @@ export default function ProductsPage() {
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
         fabricCare: form.fabricCare,
         returnPolicy: form.returnPolicy,
+        colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
       };
 
       if (editingProduct) {
@@ -697,8 +706,94 @@ export default function ProductsPage() {
               </div>
             </div>
 
+            {/* Color-specific Images */}
+            {form.colors && (
+              <div className="space-y-3">
+                <Label>Color Images</Label>
+                <p className="text-muted-foreground text-xs">
+                  Upload images for each color. When a customer selects a color, these images will be shown in the
+                  gallery.
+                </p>
+                {form.colors
+                  .split(",")
+                  .map((c) => c.trim())
+                  .filter(Boolean)
+                  .map((color) => (
+                    <div key={color} className="space-y-2 rounded-md border p-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="size-4 rounded-full border"
+                          style={{ backgroundColor: color.startsWith("#") ? color : undefined }}
+                        />
+                        <Label className="text-sm font-medium">{color}</Label>
+                        <span className="text-muted-foreground text-xs">
+                          ({(colorImages[color] || []).length} images)
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(colorImages[color] || []).map((url, i) => (
+                          <div key={url} className="group relative size-16 overflow-hidden rounded-md border">
+                            <img src={url} alt={`${color} ${i + 1}`} className="size-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setColorImages((prev) => {
+                                  const updated = { ...prev };
+                                  updated[color] = (updated[color] || []).filter((_, idx) => idx !== i);
+                                  if (updated[color].length === 0) delete updated[color];
+                                  return updated;
+                                });
+                              }}
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                            >
+                              <Trash2 className="size-3 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                        <label className="flex size-16 cursor-pointer items-center justify-center rounded-md border border-dashed hover:bg-muted">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={async (e) => {
+                              const files = e.target.files;
+                              if (!files?.length) return;
+                              setColorImageUploading(color);
+                              try {
+                                const urls: string[] = [];
+                                for (const file of Array.from(files)) {
+                                  const url = await uploadImage(file);
+                                  urls.push(url);
+                                }
+                                setColorImages((prev) => ({
+                                  ...prev,
+                                  [color]: [...(prev[color] || []), ...urls],
+                                }));
+                                toast.success(`Uploaded ${urls.length} image(s) for ${color}`);
+                              } catch (error) {
+                                console.error("Upload failed:", error);
+                                toast.error(`Failed to upload image for ${color}`);
+                              } finally {
+                                setColorImageUploading(null);
+                              }
+                            }}
+                            disabled={colorImageUploading === color}
+                          />
+                          {colorImageUploading === color ? (
+                            <span className="text-muted-foreground text-xs">...</span>
+                          ) : (
+                            <ImageIcon className="size-4 text-muted-foreground" />
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>Images</Label>
+              <Label>Images (Default Gallery)</Label>
               <div className="flex flex-wrap gap-2">
                 {images.map((url, i) => (
                   <div key={url} className="group relative size-20 overflow-hidden rounded-md border">
