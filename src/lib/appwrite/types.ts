@@ -25,6 +25,7 @@ export interface Product extends Models.Document {
   variantInventory: string;
   fabricCare: string;
   returnPolicy: string;
+  colorImages: string;
 }
 
 export interface VariantInventoryItem {
