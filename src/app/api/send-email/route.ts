@@ -18,6 +18,7 @@ async function sendEmail(to: string, subject: string, body: string) {
       to,
       subject,
       body,
+      mimeType: "text/html",
       connectionKey: PICA_CONNECTION_KEY,
     }),
   });
