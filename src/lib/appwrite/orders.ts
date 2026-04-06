@@ -56,6 +56,49 @@ export async function updateOrderStatus(id: string, status: Order["status"], cur
   }) as Promise<Order>;
 }
 
+export async function sendOrderStatusEmail(order: Order, status: Order["status"]) {
+  try {
+    await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "order-status-change",
+        customerName: order.customerName,
+        customerEmail: order.email,
+        orderId: order.$id,
+        status,
+        items: order.items,
+        total: order.total,
+        trackingNumber: order.trackingNumber,
+        courier: order.courier,
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to send status email:", error);
+  }
+}
+
+export async function sendNewOrderEmail(order: Order) {
+  try {
+    await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "new-order",
+        customerName: order.customerName,
+        customerEmail: order.email,
+        phone: order.phone,
+        orderId: order.$id,
+        items: order.items,
+        total: order.total,
+        address: order.address,
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to send new order email:", error);
+  }
+}
+
 export async function updateOrderTracking(id: string, trackingNumber: string, courier: string) {
   return dataProxy({
     action: "update",
