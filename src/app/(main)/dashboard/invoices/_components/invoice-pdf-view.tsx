@@ -7,6 +7,7 @@ import { Download, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Invoice, InvoiceItem } from "@/lib/appwrite/types";
 import { CGST_RATE, COMPANY, HSN_CODE, numberToWords, SGST_RATE } from "@/lib/invoice-pdf";
+import { VPPA_LOGO_DATA_URI } from "@/lib/vppa-logo";
 
 interface InvoicePdfViewProps {
   invoice: Invoice;
@@ -44,8 +45,19 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
       <head>
         <title>Tax Invoice #${invoice.invoiceNumber}</title>
         <style>
+          @page {
+            size: A4 portrait;
+            margin: 15mm 12mm 15mm 12mm;
+          }
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 20px; }
+          html, body {
+            width: 210mm;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #000;
+            background: #fff;
+          }
+          body { padding: 15mm 12mm; }
           table { width: 100%; border-collapse: collapse; }
           td, th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
           .no-border td, .no-border th { border: none; }
@@ -62,8 +74,16 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
           .amount-words { font-weight: bold; padding: 4px 6px; border: 1px solid #000; border-top: none; }
           .strike { text-decoration: line-through; }
           @media print {
-            body { padding: 0; }
+            html, body { width: auto; padding: 0; }
             .no-print { display: none !important; }
+          }
+          @media screen {
+            body {
+              max-width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto;
+              box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
           }
         </style>
       </head>
@@ -112,13 +132,7 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
         >
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg viewBox="0 0 100 100" width="60" height="60" role="img" aria-label="VPPA Logo">
-                <title>VPPA Logo</title>
-                <text x="50" y="60" textAnchor="middle" fontSize="40" fontWeight="bold" fontFamily="serif">
-                  V
-                </text>
-                <path d="M30 20 Q50 5 70 20" stroke="#000" strokeWidth="3" fill="none" />
-              </svg>
+              <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: 60, height: 60, objectFit: "contain" }} />
             </div>
             <h1 style={{ fontSize: 18, fontWeight: "bold", fontFamily: "Arial" }}>TAX INVOICE</h1>
           </div>

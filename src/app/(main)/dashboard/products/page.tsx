@@ -24,7 +24,7 @@ import {
   isCollectionSlug,
 } from "@/lib/appwrite/collection-slugs";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
-import type { Product } from "@/lib/appwrite/types";
+import type { Product, VariantInventoryItem } from "@/lib/appwrite/types";
 
 const PRODUCT_TYPES = [
   "Hoodie",
@@ -56,6 +56,45 @@ interface ProductForm {
   featured: boolean;
   slug: string;
   productType: string;
+  fabricCare: string;
+  returnPolicy: string;
+}
+
+function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function buildVariantGrid(sizes: string, colors: string, existing: VariantInventoryItem[]): VariantInventoryItem[] {
+  const sizeList = sizes
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const colorList = colors
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  if (sizeList.length === 0 || colorList.length === 0) return existing;
+  const grid: VariantInventoryItem[] = [];
+  for (const size of sizeList) {
+    for (const color of colorList) {
+      const found = existing.find(
+        (v) => v.size.toLowerCase() === size.toLowerCase() && v.color.toLowerCase() === color.toLowerCase(),
+      );
+      grid.push({ size, color, stock: found?.stock ?? 0 });
+    }
+  }
+  return grid;
+}
+
+function totalVariantStock(variants: VariantInventoryItem[]): number {
+  return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
 }
 
 const emptyForm: ProductForm = {
@@ -75,6 +114,8 @@ const emptyForm: ProductForm = {
   featured: false,
   slug: "",
   productType: "",
+  fabricCare: "",
+  returnPolicy: "",
 };
 
 export default function ProductsPage() {
@@ -88,6 +129,9 @@ export default function ProductsPage() {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [variantInventory, setVariantInventory] = useState<VariantInventoryItem[]>([]);
+  const [colorImages, setColorImages] = useState<Record<string, string[]>>({});
+  const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -109,6 +153,8 @@ export default function ProductsPage() {
     setEditingProduct(null);
     setForm(emptyForm);
     setImages([]);
+    setVariantInventory([]);
+    setColorImages({});
     setDialogOpen(true);
   };
 
@@ -131,11 +177,19 @@ export default function ProductsPage() {
       featured: product.featured || false,
       slug: product.slug || "",
       productType: product.productType || "",
+      fabricCare: product.fabricCare || "",
+      returnPolicy: product.returnPolicy || "",
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
     } catch {
       setImages([]);
+    }
+    setVariantInventory(parseVariantInventory(product.variantInventory));
+    try {
+      setColorImages(product.colorImages ? JSON.parse(product.colorImages) : {});
+    } catch {
+      setColorImages({});
     }
     setDialogOpen(true);
   };
@@ -175,7 +229,8 @@ export default function ProductsPage() {
       return;
     }
 
-    const stockQuantity = Number.parseInt(form.stockQuantity, 10);
+    const hasVariants = variantInventory.length > 0;
+    const stockQuantity = hasVariants ? totalVariantStock(variantInventory) : Number.parseInt(form.stockQuantity, 10);
     if (Number.isNaN(stockQuantity) || stockQuantity < 0) {
       toast.error("Stock quantity must be a valid non-negative number");
       return;
@@ -225,6 +280,10 @@ export default function ProductsPage() {
         slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
         productType: form.productType,
         sku: skuToUse,
+        variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
+        fabricCare: form.fabricCare,
+        returnPolicy: form.returnPolicy,
+        colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
       };
 
       if (editingProduct) {
@@ -437,6 +496,28 @@ export default function ProductsPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="fabricCare">Fabric & Care</Label>
+              <Textarea
+                id="fabricCare"
+                value={form.fabricCare}
+                placeholder="e.g. 100% Cotton, Machine wash cold, Tumble dry low"
+                onChange={(e) => setForm({ ...form, fabricCare: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="returnPolicy">Return Policy</Label>
+              <Textarea
+                id="returnPolicy"
+                value={form.returnPolicy}
+                placeholder="e.g. 7-day easy returns, No questions asked"
+                onChange={(e) => setForm({ ...form, returnPolicy: e.target.value })}
+                rows={3}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price">Price (INR) *</Label>
@@ -528,6 +609,73 @@ export default function ProductsPage() {
               </div>
             </div>
 
+            {form.sizes && form.colors && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Variant Inventory (Size × Color)</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const grid = buildVariantGrid(form.sizes, form.colors, variantInventory);
+                      setVariantInventory(grid);
+                      const total = totalVariantStock(grid);
+                      setForm((prev) => ({ ...prev, stockQuantity: String(total) }));
+                    }}
+                  >
+                    Generate Grid
+                  </Button>
+                </div>
+                {variantInventory.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Size</TableHead>
+                          <TableHead>Color</TableHead>
+                          <TableHead className="w-32">Stock</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {variantInventory.map((v, idx) => (
+                          <TableRow key={`${v.size}-${v.color}`}>
+                            <TableCell className="font-medium">{v.size}</TableCell>
+                            <TableCell>{v.color}</TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                className="h-8 w-24"
+                                value={v.stock}
+                                onChange={(e) => {
+                                  const updated = [...variantInventory];
+                                  updated[idx] = { ...v, stock: Math.max(0, Number.parseInt(e.target.value, 10) || 0) };
+                                  setVariantInventory(updated);
+                                  const total = totalVariantStock(updated);
+                                  setForm((prev) => ({ ...prev, stockQuantity: String(total) }));
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell colSpan={2} className="font-semibold text-right">
+                            Total Stock
+                          </TableCell>
+                          <TableCell className="font-semibold">{totalVariantStock(variantInventory)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Click &quot;Generate Grid&quot; to create inventory slots for each size × color combination.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-2">
                 <Switch
@@ -558,8 +706,94 @@ export default function ProductsPage() {
               </div>
             </div>
 
+            {/* Color-specific Images */}
+            {form.colors && (
+              <div className="space-y-3">
+                <Label>Color Images</Label>
+                <p className="text-muted-foreground text-xs">
+                  Upload images for each color. When a customer selects a color, these images will be shown in the
+                  gallery.
+                </p>
+                {form.colors
+                  .split(",")
+                  .map((c) => c.trim())
+                  .filter(Boolean)
+                  .map((color) => (
+                    <div key={color} className="space-y-2 rounded-md border p-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="size-4 rounded-full border"
+                          style={{ backgroundColor: color.startsWith("#") ? color : undefined }}
+                        />
+                        <Label className="text-sm font-medium">{color}</Label>
+                        <span className="text-muted-foreground text-xs">
+                          ({(colorImages[color] || []).length} images)
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(colorImages[color] || []).map((url, i) => (
+                          <div key={url} className="group relative size-16 overflow-hidden rounded-md border">
+                            <img src={url} alt={`${color} ${i + 1}`} className="size-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setColorImages((prev) => {
+                                  const updated = { ...prev };
+                                  updated[color] = (updated[color] || []).filter((_, idx) => idx !== i);
+                                  if (updated[color].length === 0) delete updated[color];
+                                  return updated;
+                                });
+                              }}
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                            >
+                              <Trash2 className="size-3 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                        <label className="flex size-16 cursor-pointer items-center justify-center rounded-md border border-dashed hover:bg-muted">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={async (e) => {
+                              const files = e.target.files;
+                              if (!files?.length) return;
+                              setColorImageUploading(color);
+                              try {
+                                const urls: string[] = [];
+                                for (const file of Array.from(files)) {
+                                  const url = await uploadImage(file);
+                                  urls.push(url);
+                                }
+                                setColorImages((prev) => ({
+                                  ...prev,
+                                  [color]: [...(prev[color] || []), ...urls],
+                                }));
+                                toast.success(`Uploaded ${urls.length} image(s) for ${color}`);
+                              } catch (error) {
+                                console.error("Upload failed:", error);
+                                toast.error(`Failed to upload image for ${color}`);
+                              } finally {
+                                setColorImageUploading(null);
+                              }
+                            }}
+                            disabled={colorImageUploading === color}
+                          />
+                          {colorImageUploading === color ? (
+                            <span className="text-muted-foreground text-xs">...</span>
+                          ) : (
+                            <ImageIcon className="size-4 text-muted-foreground" />
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>Images</Label>
+              <Label>Images (Default Gallery)</Label>
               <div className="flex flex-wrap gap-2">
                 {images.map((url, i) => (
                   <div key={url} className="group relative size-20 overflow-hidden rounded-md border">
