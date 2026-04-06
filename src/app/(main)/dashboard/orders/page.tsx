@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getOrders, updateOrderStatus, updateOrderTracking } from "@/lib/appwrite/orders";
+import { getOrders, sendOrderStatusEmail, updateOrderStatus, updateOrderTracking } from "@/lib/appwrite/orders";
 import type { Order, OrderItem, StatusTimeline } from "@/lib/appwrite/types";
 
 const STATUS_COLORS: Record<Order["status"], string> = {
@@ -59,8 +59,18 @@ export default function OrdersPage() {
 
   const handleStatusChange = async (orderId: string, status: Order["status"], currentTimeline?: string) => {
     try {
-      await updateOrderStatus(orderId, status, currentTimeline);
+      const updatedOrder = await updateOrderStatus(orderId, status, currentTimeline);
       toast.success(`Order status updated to ${status}`);
+
+      // Send email notification to customer (fire and forget)
+      sendOrderStatusEmail(updatedOrder, status)
+        .then(() => {
+          toast.success("Email notification sent to customer");
+        })
+        .catch(() => {
+          toast.error("Failed to send email notification");
+        });
+
       fetchOrders();
     } catch (error) {
       console.error("Failed to update status:", error);
