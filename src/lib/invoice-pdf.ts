@@ -1,11 +1,14 @@
 import type { InvoiceItem } from "./appwrite/types";
+import { VPPA_LOGO_DATA_URI } from "./vppa-logo";
 
 const COMPANY = {
-  name: "VPPA fashions",
-  address: "VPPA fashions no.161\\1 100 Feet Road Sir M Vishveswaraya Layout Jnana Ganga Nagar",
+  name: "VPPA FASHIONS",
+  address:
+    "Ground Floor, Sir M, No.161/1, 100 Feet Rd, 3rd Block, Sir M Vishveswaraya Layout, Jnana Ganga Nagar, Ullal, Bengaluru, Karnataka 560110",
   phone: "9071691999",
   email: "vppafashions@gmail.com",
   gstin: "29DLFPG6129H1ZY",
+  logo: VPPA_LOGO_DATA_URI,
 };
 
 const GST_RATE = 5;
