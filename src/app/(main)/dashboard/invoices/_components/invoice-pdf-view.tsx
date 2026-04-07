@@ -161,17 +161,23 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
         <style>
           @page {
             size: 80mm auto;
-            margin: 2mm;
+            margin: 0;
           }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           html, body {
             width: 80mm;
+            max-width: 80mm;
             font-family: 'Courier New', Courier, monospace;
             font-size: 12px;
             color: #000;
             background: #fff;
           }
-          body { padding: 2mm; }
+          body { padding: 3mm; }
+          .receipt-wrapper {
+            width: 76mm;
+            max-width: 76mm;
+            margin: 0 auto;
+          }
           .center { text-align: center; }
           .right { text-align: right; }
           .bold { font-weight: bold; }
@@ -179,20 +185,44 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
           .separator-double { border-top: 2px solid #000; margin: 4px 0; }
           table { width: 100%; border-collapse: collapse; }
           td { vertical-align: top; }
+          .tip-bar {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+          }
           @media print {
-            html, body { width: 80mm; padding: 0; margin: 0; }
+            html, body { width: 80mm; max-width: 80mm; padding: 0; margin: 0; }
+            .receipt-wrapper { width: 76mm; max-width: 76mm; }
+            .tip-bar { display: none !important; }
           }
           @media screen {
-            body {
+            html, body { width: auto; max-width: 100%; }
+            .receipt-wrapper {
+              width: 80mm;
               max-width: 80mm;
-              margin: 20px auto;
-              box-shadow: 0 0 10px rgba(0,0,0,0.15);
+              margin: 0 auto;
               padding: 4mm;
+              box-shadow: 0 0 10px rgba(0,0,0,0.15);
+              background: #fff;
+            }
+            body {
+              background: #f5f5f5;
+              padding: 20px;
             }
           }
         </style>
       </head>
       <body>
+        <div class="tip-bar">
+          <strong>Tip:</strong> Select your <strong>thermal printer</strong> (not "Microsoft Print to PDF") in the Destination dropdown. Paper size will be set to 80mm automatically. If printing to PDF, the receipt will appear on the left side of the page.
+        </div>
+        <div class="receipt-wrapper">
         <!-- Logo & Header -->
         <div class="center">
           <img src="${VPPA_LOGO_DATA_URI}" alt="VPPA" style="width:40px;height:40px;" />
@@ -280,6 +310,7 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
         </div>
 
         <div style="margin-top:8px;"></div>
+        </div>
       </body>
       </html>
     `);
