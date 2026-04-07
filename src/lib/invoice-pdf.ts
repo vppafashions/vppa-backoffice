@@ -4,7 +4,7 @@ import { VPPA_LOGO_DATA_URI } from "./vppa-logo";
 const COMPANY = {
   name: "VPPA FASHIONS",
   address:
-    "Ground Floor, Sir M, No.161/1, 100 Feet Rd, 3rd Block, Sir M Vishveswaraya Layout, Jnana Ganga Nagar, Ullal, Bengaluru, Karnataka 560110",
+    "No.161/1, Ground Floor, 100 Feet Rd, 3rd Block, Sir M Vishveswaraya Layout, Ullal, Bengaluru, Karnataka 560110",
   phone: "9071691999",
   email: "vppafashions@gmail.com",
   gstin: "29DLFPG6129H1ZY",
