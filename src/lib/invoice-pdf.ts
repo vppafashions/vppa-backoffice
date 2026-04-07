@@ -11,12 +11,12 @@ const COMPANY = {
   logo: VPPA_LOGO_DATA_URI,
 };
 
-const GST_RATE = 5;
-const CGST_RATE = 2.5;
-const SGST_RATE = 2.5;
-const HSN_CODE = "60062200";
+const DEFAULT_GST_RATE = 5;
+const DEFAULT_CGST_RATE = 2.5;
+const DEFAULT_SGST_RATE = 2.5;
+const DEFAULT_HSN_CODE = "60062200";
 
-export { COMPANY, GST_RATE, CGST_RATE, SGST_RATE, HSN_CODE };
+export { COMPANY, DEFAULT_GST_RATE, DEFAULT_CGST_RATE, DEFAULT_SGST_RATE, DEFAULT_HSN_CODE };
 
 function numberToWords(num: number): string {
   if (num === 0) return "ZERO RUPEES ONLY";
@@ -58,10 +58,23 @@ function numberToWords(num: number): string {
   return `${convert(rounded)} RUPEES ONLY`;
 }
 
-export function calculateInvoiceItem(name: string, quantity: number, rate: number, originalRate: number): InvoiceItem {
-  const taxableValue = Number(((rate * quantity) / (1 + GST_RATE / 100)).toFixed(2));
-  const cgst = Number((taxableValue * (CGST_RATE / 100)).toFixed(2));
-  const sgst = Number((taxableValue * (SGST_RATE / 100)).toFixed(2));
+export function calculateInvoiceItem(
+  name: string,
+  quantity: number,
+  rate: number,
+  originalRate: number,
+  hsn?: string,
+  cgstPercent?: number,
+  sgstPercent?: number,
+): InvoiceItem {
+  const itemCgstRate = cgstPercent ?? DEFAULT_CGST_RATE;
+  const itemSgstRate = sgstPercent ?? DEFAULT_SGST_RATE;
+  const itemGstRate = itemCgstRate + itemSgstRate;
+  const itemHsn = hsn || DEFAULT_HSN_CODE;
+
+  const taxableValue = Number(((rate * quantity) / (1 + itemGstRate / 100)).toFixed(2));
+  const cgst = Number((taxableValue * (itemCgstRate / 100)).toFixed(2));
+  const sgst = Number((taxableValue * (itemSgstRate / 100)).toFixed(2));
   const total = rate * quantity;
 
   return {
@@ -69,8 +82,10 @@ export function calculateInvoiceItem(name: string, quantity: number, rate: numbe
     quantity,
     rate,
     originalRate,
-    hsn: HSN_CODE,
-    gstPercent: GST_RATE,
+    hsn: itemHsn,
+    gstPercent: itemGstRate,
+    cgstPercent: itemCgstRate,
+    sgstPercent: itemSgstRate,
     taxableValue,
     cgst,
     sgst,

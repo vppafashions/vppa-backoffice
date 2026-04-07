@@ -96,10 +96,20 @@ export interface InvoiceItem {
   originalRate: number;
   hsn: string;
   gstPercent: number;
+  cgstPercent: number;
+  sgstPercent: number;
   taxableValue: number;
   cgst: number;
   sgst: number;
   total: number;
+}
+
+export interface HsnCode extends Models.Document {
+  code: string;
+  description: string;
+  cgstPercent: number;
+  sgstPercent: number;
+  igstPercent: number;
 }
 
 export interface SizeGuide extends Models.Document {
