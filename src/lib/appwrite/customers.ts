@@ -29,14 +29,44 @@ export async function getAllWishlists() {
   return databases.listDocuments(DATABASE_ID, COLLECTION_IDS.wishlists, [Query.limit(500)]);
 }
 
+export interface AuthUser {
+  $id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export interface CustomerWithActivity extends Customer {
   cartItems: CartDocument[];
   wishlistItems: WishlistDocument[];
   cartTotal: number;
+  authName?: string;
+  authEmail?: string;
+  authPhone?: string;
+}
+
+export async function getAuthUsers(): Promise<AuthUser[]> {
+  try {
+    const res = await fetch("/api/data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "listUsers" }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.users || []) as AuthUser[];
+  } catch {
+    return [];
+  }
 }
 
 export async function getCustomersWithActivity(): Promise<CustomerWithActivity[]> {
-  const [customersRes, cartsRes, wishlistsRes] = await Promise.all([getCustomers(), getAllCarts(), getAllWishlists()]);
+  const [customersRes, cartsRes, wishlistsRes, authUsers] = await Promise.all([
+    getCustomers(),
+    getAllCarts(),
+    getAllWishlists(),
+    getAuthUsers(),
+  ]);
 
   const customers = customersRes.documents as unknown as Customer[];
   const carts = cartsRes.documents as unknown as CartDocument[];
@@ -57,18 +87,34 @@ export async function getCustomersWithActivity(): Promise<CustomerWithActivity[]
     wishlistsByUser.set(wl.userId, existing);
   }
 
+  // Build auth user lookup by ID
+  const authUserMap = new Map<string, AuthUser>();
+  for (const au of authUsers) {
+    authUserMap.set(au.$id, au);
+  }
+
   // Collect all unique userIds from carts and wishlists that don't have a customer record
   const customerUserIds = new Set(customers.map((c) => c.userId));
   const allUserIds = new Set([...cartsByUser.keys(), ...wishlistsByUser.keys()]);
+  // Also include auth users who may not have cart/wishlist yet
+  for (const au of authUsers) {
+    if (au.$id !== "admin") {
+      allUserIds.add(au.$id);
+    }
+  }
 
   const result: CustomerWithActivity[] = customers.map((customer) => {
     const userCarts = cartsByUser.get(customer.userId) || [];
     const userWishlists = wishlistsByUser.get(customer.userId) || [];
+    const authUser = authUserMap.get(customer.userId);
     return {
       ...customer,
       cartItems: userCarts,
       wishlistItems: userWishlists,
       cartTotal: userCarts.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      authName: authUser?.name || "",
+      authEmail: authUser?.email || "",
+      authPhone: authUser?.phone || "",
     };
   });
 
@@ -77,12 +123,13 @@ export async function getCustomersWithActivity(): Promise<CustomerWithActivity[]
     if (!customerUserIds.has(userId)) {
       const userCarts = cartsByUser.get(userId) || [];
       const userWishlists = wishlistsByUser.get(userId) || [];
+      const authUser = authUserMap.get(userId);
       result.push({
         userId,
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
+        firstName: authUser?.name?.split(" ")[0] || "",
+        lastName: authUser?.name?.split(" ").slice(1).join(" ") || "",
+        email: authUser?.email || "",
+        phone: authUser?.phone || "",
         billingAddress: "",
         billingCity: "",
         billingState: "",

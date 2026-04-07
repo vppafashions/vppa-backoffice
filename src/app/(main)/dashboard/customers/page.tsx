@@ -127,16 +127,17 @@ export default function CustomersPage() {
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {customer.firstName || customer.lastName
-                            ? `${customer.firstName} ${customer.lastName}`.trim()
-                            : "Anonymous User"}
+                          {customer.authName ||
+                            (customer.firstName || customer.lastName
+                              ? `${customer.firstName} ${customer.lastName}`.trim()
+                              : "Anonymous User")}
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          {customer.email || `${customer.userId.slice(0, 12)}...`}
+                          {customer.authEmail || customer.email || `${customer.userId.slice(0, 12)}...`}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{customer.phone || "—"}</TableCell>
+                    <TableCell className="text-sm">{customer.authPhone || customer.phone || "—"}</TableCell>
                     <TableCell>
                       {customer.cartItems.length > 0 ? (
                         <Badge
@@ -199,19 +200,20 @@ export default function CustomersPage() {
                 <div>
                   <Label className="text-muted-foreground">Name</Label>
                   <p className="font-medium">
-                    {selectedCustomer.firstName || selectedCustomer.lastName
-                      ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim()
-                      : "Anonymous"}
+                    {selectedCustomer.authName ||
+                      (selectedCustomer.firstName || selectedCustomer.lastName
+                        ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim()
+                        : "Anonymous")}
                   </p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Email</Label>
-                  <p className="font-medium">{selectedCustomer.email || "—"}</p>
+                  <p className="font-medium">{selectedCustomer.authEmail || selectedCustomer.email || "—"}</p>
                 </div>
-                {selectedCustomer.phone && (
+                {(selectedCustomer.authPhone || selectedCustomer.phone) && (
                   <div>
                     <Label className="text-muted-foreground">Phone</Label>
-                    <p className="font-medium">{selectedCustomer.phone}</p>
+                    <p className="font-medium">{selectedCustomer.authPhone || selectedCustomer.phone}</p>
                   </div>
                 )}
                 {selectedCustomer.alternatePhone && (
