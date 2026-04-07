@@ -1,4 +1,4 @@
-import { FileText, Gauge, Image, Layers, type LucideIcon, ReceiptText, ShoppingBag } from "lucide-react";
+import { FileText, Gauge, Image, Layers, type LucideIcon, ReceiptText, Ruler, ShoppingBag } from "lucide-react";
 
 export interface NavSubItem {
   title: string;
@@ -50,6 +50,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Collections",
         url: "/dashboard/collections",
         icon: Layers,
+      },
+      {
+        title: "Size Guides",
+        url: "/dashboard/size-guides",
+        icon: Ruler,
       },
     ],
   },

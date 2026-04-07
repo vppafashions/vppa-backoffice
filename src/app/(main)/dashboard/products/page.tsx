@@ -24,7 +24,8 @@ import {
   isCollectionSlug,
 } from "@/lib/appwrite/collection-slugs";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
-import type { Product, VariantInventoryItem } from "@/lib/appwrite/types";
+import { getSizeGuides } from "@/lib/appwrite/size-guides";
+import type { Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
 
 const PRODUCT_TYPES = [
   "Hoodie",
@@ -58,6 +59,7 @@ interface ProductForm {
   productType: string;
   fabricCare: string;
   returnPolicy: string;
+  sizeGuideId: string;
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -116,6 +118,7 @@ const emptyForm: ProductForm = {
   productType: "",
   fabricCare: "",
   returnPolicy: "",
+  sizeGuideId: "",
 };
 
 export default function ProductsPage() {
@@ -132,6 +135,7 @@ export default function ProductsPage() {
   const [variantInventory, setVariantInventory] = useState<VariantInventoryItem[]>([]);
   const [colorImages, setColorImages] = useState<Record<string, string[]>>({});
   const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
+  const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -147,6 +151,11 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts();
+    getSizeGuides()
+      .then((res) => setSizeGuides(res.documents as SizeGuide[]))
+      .catch(() => {
+        /* ignore */
+      });
   }, [fetchProducts]);
 
   const handleNew = () => {
@@ -179,6 +188,7 @@ export default function ProductsPage() {
       productType: product.productType || "",
       fabricCare: product.fabricCare || "",
       returnPolicy: product.returnPolicy || "",
+      sizeGuideId: product.sizeGuideId || "",
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -284,6 +294,7 @@ export default function ProductsPage() {
         fabricCare: form.fabricCare,
         returnPolicy: form.returnPolicy,
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
+        sizeGuideId: form.sizeGuideId,
       };
 
       if (editingProduct) {
@@ -518,6 +529,29 @@ export default function ProductsPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Size Guide</Label>
+              <Select
+                value={form.sizeGuideId || "none"}
+                onValueChange={(value) => setForm({ ...form, sizeGuideId: value === "none" ? "" : value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a size guide" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No size guide</SelectItem>
+                  {sizeGuides.map((sg) => (
+                    <SelectItem key={sg.$id} value={sg.$id}>
+                      {sg.name} ({sg.gender} – {sg.clothingType})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Link a size guide to show on the product page. Manage guides in Catalog &rarr; Size Guides.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price">Price (INR) *</Label>
@@ -660,7 +694,7 @@ export default function ProductsPage() {
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell colSpan={2} className="font-semibold text-right">
+                          <TableCell colSpan={2} className="text-right font-semibold">
                             Total Stock
                           </TableCell>
                           <TableCell className="font-semibold">{totalVariantStock(variantInventory)}</TableCell>
@@ -725,7 +759,7 @@ export default function ProductsPage() {
                           className="size-4 rounded-full border"
                           style={{ backgroundColor: color.startsWith("#") ? color : undefined }}
                         />
-                        <Label className="text-sm font-medium">{color}</Label>
+                        <Label className="font-medium text-sm">{color}</Label>
                         <span className="text-muted-foreground text-xs">
                           ({(colorImages[color] || []).length} images)
                         </span>

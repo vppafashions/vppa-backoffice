@@ -26,6 +26,7 @@ export interface Product extends Models.Document {
   fabricCare: string;
   returnPolicy: string;
   colorImages: string;
+  sizeGuideId: string;
 }
 
 export interface VariantInventoryItem {
@@ -99,6 +100,15 @@ export interface InvoiceItem {
   cgst: number;
   sgst: number;
   total: number;
+}
+
+export interface SizeGuide extends Models.Document {
+  name: string;
+  gender: string;
+  clothingType: string;
+  columns: string;
+  rows: string;
+  unit: string;
 }
 
 export interface Invoice extends Models.Document {
