@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getProducts } from "@/lib/appwrite/products";
 import type { Product, VariantInventoryItem } from "@/lib/appwrite/types";
+import { VPPA_LOGO_DATA_URI } from "@/lib/vppa-logo";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -89,7 +90,9 @@ interface StickerProps {
 function Sticker({ product, variant }: StickerProps) {
   const productUrl = `https://vppafashions.com/product/${product.$id}`;
   const websiteUrl = "https://vppafashions.com";
-  const itemCode = variant.itemCode || product.itemCode || "";
+  // Ensure full 13-digit item code, pad with leading zeros if needed
+  const rawCode = variant.itemCode || product.itemCode || "";
+  const itemCode = rawCode.padStart(13, "0");
 
   return (
     <div
@@ -110,7 +113,7 @@ function Sticker({ product, variant }: StickerProps) {
         overflow: "hidden",
       }}
     >
-      {/* Top: Brand */}
+      {/* Top: Brand with logo */}
       <div
         style={{
           display: "flex",
@@ -120,6 +123,7 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
+        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "28px", height: "28px", objectFit: "contain" }} />
         <span
           style={{
             fontSize: "11pt",
@@ -149,19 +153,8 @@ function Sticker({ product, variant }: StickerProps) {
               fontWeight: 800,
             }}
           >
-            {formatCurrency(product.price)}
+            MRP {formatCurrency(product.originalPrice || product.price)}
           </div>
-          {product.originalPrice > product.price && (
-            <div
-              style={{
-                fontSize: "8pt",
-                textDecoration: "line-through",
-                color: "#888",
-              }}
-            >
-              MRP {formatCurrency(product.originalPrice)}
-            </div>
-          )}
         </div>
         <div style={{ flexShrink: 0 }}>
           <QRCodeSVG value={productUrl} size={60} level="M" />
