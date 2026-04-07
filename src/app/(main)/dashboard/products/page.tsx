@@ -41,6 +41,77 @@ const PRODUCT_TYPES = [
   "Accessory",
 ] as const;
 
+const GENDERS = ["Men", "Women", "Unisex", "Kids"] as const;
+
+const GENDER_CODE: Record<string, string> = { Men: "1", Women: "2", Unisex: "3", Kids: "4" };
+
+const SIZE_CODE: Record<string, string> = {
+  XS: "01",
+  S: "02",
+  M: "03",
+  L: "04",
+  XL: "05",
+  XXL: "06",
+  XXXL: "07",
+  Free: "99",
+  "Free Size": "99",
+};
+
+function getSizeCode(size: string): string {
+  const upper = size.trim().toUpperCase();
+  if (SIZE_CODE[upper]) return SIZE_CODE[upper];
+  // For numeric sizes (28, 30, etc.), use last 2 digits
+  const num = Number.parseInt(size.trim(), 10);
+  if (!Number.isNaN(num)) return String(num % 100).padStart(2, "0");
+  return "00";
+}
+
+let colorCodeCounter = 1;
+const colorCodeMap: Record<string, string> = {};
+
+function getColorCode(color: string): string {
+  const key = color.trim().toLowerCase();
+  if (!colorCodeMap[key]) {
+    colorCodeMap[key] = String(colorCodeCounter).padStart(2, "0");
+    colorCodeCounter++;
+  }
+  return colorCodeMap[key];
+}
+
+function initColorCodes(products: Product[]) {
+  colorCodeCounter = 1;
+  const seen = new Set<string>();
+  for (const p of products) {
+    if (!p.colors) continue;
+    for (const c of p.colors.split(",")) {
+      const key = c.trim().toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        colorCodeMap[key] = String(colorCodeCounter).padStart(2, "0");
+        colorCodeCounter++;
+      }
+    }
+  }
+}
+
+function generateVariantItemCode(productId: string, gender: string, size: string, color: string): string {
+  const pid = productId.padStart(5, "0");
+  const g = GENDER_CODE[gender] || "3";
+  const s = getSizeCode(size);
+  const c = getColorCode(color);
+  return `${pid}${g}${s}${c}001`;
+}
+
+function getNextProductId(products: Product[]): string {
+  let max = 99; // Start from 00100
+  for (const p of products) {
+    const code = p.itemCode || "";
+    const num = Number.parseInt(code, 10);
+    if (!Number.isNaN(num) && num > max) max = num;
+  }
+  return String(max + 1).padStart(5, "0");
+}
+
 interface ProductForm {
   name: string;
   itemCode: string;
@@ -61,6 +132,7 @@ interface ProductForm {
   fabricCare: string;
   returnPolicy: string;
   sizeGuideId: string;
+  gender: string;
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -74,7 +146,13 @@ function parseVariantInventory(raw: string | undefined | null): VariantInventory
   return [];
 }
 
-function buildVariantGrid(sizes: string, colors: string, existing: VariantInventoryItem[]): VariantInventoryItem[] {
+function buildVariantGrid(
+  sizes: string,
+  colors: string,
+  existing: VariantInventoryItem[],
+  productId: string,
+  gender: string,
+): VariantInventoryItem[] {
   const sizeList = sizes
     .split(",")
     .map((s) => s.trim())
@@ -90,7 +168,8 @@ function buildVariantGrid(sizes: string, colors: string, existing: VariantInvent
       const found = existing.find(
         (v) => v.size.toLowerCase() === size.toLowerCase() && v.color.toLowerCase() === color.toLowerCase(),
       );
-      grid.push({ size, color, stock: found?.stock ?? 0 });
+      const itemCode = generateVariantItemCode(productId, gender, size, color);
+      grid.push({ size, color, stock: found?.stock ?? 0, itemCode });
     }
   }
   return grid;
@@ -120,6 +199,7 @@ const emptyForm: ProductForm = {
   fabricCare: "",
   returnPolicy: "",
   sizeGuideId: "",
+  gender: "Unisex",
 };
 
 export default function ProductsPage() {
@@ -142,7 +222,9 @@ export default function ProductsPage() {
   const fetchProducts = useCallback(async () => {
     try {
       const res = await getProducts();
-      setProducts(res.documents as Product[]);
+      const docs = res.documents as Product[];
+      initColorCodes(docs);
+      setProducts(docs);
     } catch (error) {
       console.error("Failed to fetch products:", error);
       toast.error("Failed to load products");
@@ -167,7 +249,8 @@ export default function ProductsPage() {
 
   const handleNew = () => {
     setEditingProduct(null);
-    setForm(emptyForm);
+    const nextId = getNextProductId(products);
+    setForm({ ...emptyForm, itemCode: nextId });
     setImages([]);
     setVariantInventory([]);
     setColorImages({});
@@ -196,6 +279,7 @@ export default function ProductsPage() {
       fabricCare: product.fabricCare || "",
       returnPolicy: product.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
+      gender: product.gender || "Unisex",
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -237,7 +321,7 @@ export default function ProductsPage() {
 
   const handleSave = async () => {
     if (!form.name || !form.itemCode || !form.hsnCode || !form.price || !form.collectionSlug) {
-      toast.error("Name, item code, HSN code, price, and collection are required");
+      toast.error("Name, product ID, HSN code, price, and collection are required");
       return;
     }
 
@@ -302,6 +386,7 @@ export default function ProductsPage() {
         returnPolicy: form.returnPolicy,
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         sizeGuideId: form.sizeGuideId,
+        gender: form.gender || "Unisex",
       };
 
       if (editingProduct) {
@@ -373,7 +458,8 @@ export default function ProductsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Item Code</TableHead>
+                  <TableHead>Product ID</TableHead>
+                  <TableHead>Gender</TableHead>
                   <TableHead>HSN</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Collection</TableHead>
@@ -390,7 +476,8 @@ export default function ProductsPage() {
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell className="font-mono text-xs uppercase">{product.sku || "—"}</TableCell>
                     <TableCell>{product.productType || "—"}</TableCell>
-                    <TableCell className="font-mono text-xs uppercase">{product.itemCode}</TableCell>
+                    <TableCell className="font-mono text-xs">{product.itemCode}</TableCell>
+                    <TableCell>{product.gender || "Unisex"}</TableCell>
                     <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
                     <TableCell>{formatCurrency(product.price)}</TableCell>
                     <TableCell>
@@ -473,17 +560,28 @@ export default function ProductsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="itemCode">Item Code *</Label>
-                <Input
-                  id="itemCode"
-                  value={form.itemCode}
-                  placeholder="e.g. VPPA-001"
-                  onChange={(e) => setForm({ ...form, itemCode: e.target.value })}
-                />
+                <Label htmlFor="itemCode">Product ID *</Label>
+                <Input id="itemCode" value={form.itemCode} disabled className="font-mono text-sm" />
+                <p className="text-muted-foreground text-xs">Auto-generated (00100→99999)</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender *</Label>
+                <Select value={form.gender || "Unisex"} onValueChange={(value) => setForm({ ...form, gender: value })}>
+                  <SelectTrigger id="gender" className="w-full">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GENDERS.map((g) => (
+                      <SelectItem key={g} value={g}>
+                        {g}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
                 <Input
@@ -681,7 +779,13 @@ export default function ProductsPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      const grid = buildVariantGrid(form.sizes, form.colors, variantInventory);
+                      const grid = buildVariantGrid(
+                        form.sizes,
+                        form.colors,
+                        variantInventory,
+                        form.itemCode,
+                        form.gender,
+                      );
                       setVariantInventory(grid);
                       const total = totalVariantStock(grid);
                       setForm((prev) => ({ ...prev, stockQuantity: String(total) }));
@@ -697,6 +801,7 @@ export default function ProductsPage() {
                         <TableRow>
                           <TableHead>Size</TableHead>
                           <TableHead>Color</TableHead>
+                          <TableHead>Item Code (13-digit)</TableHead>
                           <TableHead className="w-32">Stock</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -705,6 +810,7 @@ export default function ProductsPage() {
                           <TableRow key={`${v.size}-${v.color}`}>
                             <TableCell className="font-medium">{v.size}</TableCell>
                             <TableCell>{v.color}</TableCell>
+                            <TableCell className="font-mono text-xs">{v.itemCode || "—"}</TableCell>
                             <TableCell>
                               <Input
                                 type="number"
@@ -723,7 +829,7 @@ export default function ProductsPage() {
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell colSpan={2} className="text-right font-semibold">
+                          <TableCell colSpan={3} className="text-right font-semibold">
                             Total Stock
                           </TableCell>
                           <TableCell className="font-semibold">{totalVariantStock(variantInventory)}</TableCell>

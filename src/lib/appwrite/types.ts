@@ -27,12 +27,14 @@ export interface Product extends Models.Document {
   returnPolicy: string;
   colorImages: string;
   sizeGuideId: string;
+  gender: string;
 }
 
 export interface VariantInventoryItem {
   size: string;
   color: string;
   stock: number;
+  itemCode?: string;
 }
 
 export interface Collection extends Models.Document {
