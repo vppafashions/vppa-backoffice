@@ -38,9 +38,9 @@ export interface CustomerWithActivity extends Customer {
 export async function getCustomersWithActivity(): Promise<CustomerWithActivity[]> {
   const [customersRes, cartsRes, wishlistsRes] = await Promise.all([getCustomers(), getAllCarts(), getAllWishlists()]);
 
-  const customers = customersRes.documents as Customer[];
-  const carts = cartsRes.documents as CartDocument[];
-  const wishlists = wishlistsRes.documents as WishlistDocument[];
+  const customers = customersRes.documents as unknown as Customer[];
+  const carts = cartsRes.documents as unknown as CartDocument[];
+  const wishlists = wishlistsRes.documents as unknown as WishlistDocument[];
 
   // Group carts and wishlists by userId
   const cartsByUser = new Map<string, CartDocument[]>();
@@ -107,7 +107,8 @@ export async function getCustomersWithActivity(): Promise<CustomerWithActivity[]
         $createdAt: "",
         $updatedAt: "",
         $permissions: [],
-      });
+        $sequence: "",
+      } as CustomerWithActivity);
     }
   }
 
