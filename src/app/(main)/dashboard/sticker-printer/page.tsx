@@ -273,11 +273,8 @@ function PrintSheet({ items }: { items: PrintItem[] }) {
     <div
       className="print-sheet"
       style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "4mm",
-        padding: "5mm",
-        justifyContent: "flex-start",
+        display: "block",
+        padding: 0,
       }}
     >
       {stickers.map((s, i) => (
@@ -401,21 +398,25 @@ export default function StickerPrinterPage() {
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
+            width: 60mm;
           }
           .print-sheet {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 4mm !important;
-            padding: 5mm !important;
+            display: block !important;
+            padding: 0 !important;
           }
           .sticker-unit {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 2mm !important;
+          }
+          .sticker-unit:last-child {
+            page-break-after: auto !important;
           }
           @page {
-            size: A4;
-            margin: 10mm;
+            size: 60mm 100mm;
+            margin: 0;
           }
         }
       `}</style>
