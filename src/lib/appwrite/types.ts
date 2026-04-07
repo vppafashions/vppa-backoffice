@@ -166,6 +166,35 @@ export interface WishlistDocument extends Models.Document {
   collectionSlug: string;
 }
 
+export type ReturnStatus = "requested" | "approved" | "rejected" | "picked_up" | "refunded";
+
+export interface ReturnRequest extends Models.Document {
+  orderId: string;
+  userId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  items: string;
+  reason: string;
+  reasonDetails: string;
+  status: ReturnStatus;
+  refundAmount: number;
+  refundMethod: string;
+  razorpayRefundId: string;
+  adminNotes: string;
+  statusTimeline: string;
+  originalPaymentId: string;
+}
+
+export interface ReturnItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  size: string;
+  color: string;
+}
+
 export interface Invoice extends Models.Document {
   invoiceNumber: string;
   invoiceDate: string;
