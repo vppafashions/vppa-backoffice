@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { Client, Databases, ID, Query } from "node-appwrite";
+import { Client, Databases, ID, Query, Users } from "node-appwrite";
 
 const ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1";
 const PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || "69aaa3a900228aff9ae5";
@@ -11,9 +11,12 @@ function getSessionCookie(req: NextRequest): string | undefined {
   return req.cookies.get(`a_session_${PROJECT_ID}`)?.value;
 }
 
+function getClient(): Client {
+  return new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID).setKey(API_KEY);
+}
+
 function getAdminClient(): Databases {
-  const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID).setKey(API_KEY);
-  return new Databases(client);
+  return new Databases(getClient());
 }
 
 function verifySession(req: NextRequest): boolean {
@@ -65,6 +68,11 @@ export async function POST(req: NextRequest) {
       case "delete": {
         await databases.deleteDocument(DATABASE_ID, collectionId, documentId);
         return NextResponse.json({ success: true });
+      }
+      case "listUsers": {
+        const usersService = new Users(getClient());
+        const result = await usersService.list();
+        return NextResponse.json(result);
       }
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
