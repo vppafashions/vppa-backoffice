@@ -72,10 +72,11 @@ export function calculateInvoiceItem(
   const itemGstRate = itemCgstRate + itemSgstRate;
   const itemHsn = hsn || DEFAULT_HSN_CODE;
 
-  const taxableValue = Number(((rate * quantity) / (1 + itemGstRate / 100)).toFixed(2));
-  const cgst = Number((taxableValue * (itemCgstRate / 100)).toFixed(2));
-  const sgst = Number((taxableValue * (itemSgstRate / 100)).toFixed(2));
   const total = rate * quantity;
+  const taxableValue = Math.round((total / (1 + itemGstRate / 100)) * 100) / 100;
+  const totalItemTax = Math.round((total - taxableValue) * 100) / 100;
+  const cgst = Math.round((totalItemTax / 2) * 100) / 100;
+  const sgst = Math.round((totalItemTax - cgst) * 100) / 100;
 
   return {
     name,
@@ -95,20 +96,20 @@ export function calculateInvoiceItem(
 
 export function calculateInvoiceTotals(items: InvoiceItem[], shippingAmount: number, discount: number) {
   const subtotal = items.reduce((sum, item) => sum + item.rate * item.quantity, 0);
-  const taxableAmount = items.reduce((sum, item) => sum + item.taxableValue, 0);
-  const cgstAmount = items.reduce((sum, item) => sum + item.cgst, 0);
-  const sgstAmount = items.reduce((sum, item) => sum + item.sgst, 0);
-  const totalTax = cgstAmount + sgstAmount;
-  const totalAfterTax = taxableAmount + totalTax;
-  const grandTotal = totalAfterTax + shippingAmount - discount;
+  const taxableAmount = Math.round(items.reduce((sum, item) => sum + item.taxableValue, 0) * 100) / 100;
+  const cgstAmount = Math.round(items.reduce((sum, item) => sum + item.cgst, 0) * 100) / 100;
+  const sgstAmount = Math.round(items.reduce((sum, item) => sum + item.sgst, 0) * 100) / 100;
+  const totalTax = Math.round((cgstAmount + sgstAmount) * 100) / 100;
+  // Grand total must equal the actual amount: subtotal + shipping - discount
+  const grandTotal = Math.round((subtotal + shippingAmount - discount) * 100) / 100;
 
   return {
-    subtotal: Number(subtotal.toFixed(2)),
-    taxableAmount: Number(taxableAmount.toFixed(2)),
-    cgstAmount: Number(cgstAmount.toFixed(2)),
-    sgstAmount: Number(sgstAmount.toFixed(2)),
-    totalTax: Number(totalTax.toFixed(2)),
-    grandTotal: Number(grandTotal.toFixed(2)),
+    subtotal: Math.round(subtotal * 100) / 100,
+    taxableAmount,
+    cgstAmount,
+    sgstAmount,
+    totalTax,
+    grandTotal,
   };
 }
 
