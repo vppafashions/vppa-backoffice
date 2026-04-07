@@ -410,6 +410,8 @@ export default function StickerPrinterPage() {
             border: none !important;
             margin: 0 !important;
             padding: 2mm !important;
+            transform: rotate(180deg) !important;
+            transform-origin: center center !important;
           }
           .sticker-unit:last-child {
             page-break-after: auto !important;
