@@ -17,6 +17,9 @@ export const COLLECTION_IDS = {
   invoices: "invoices",
   sizeGuides: "size-guides",
   hsnCodes: "hsn-codes",
+  customers: "customers",
+  carts: "carts",
+  wishlists: "wishlists",
 } as const;
 
 export const CLOUDINARY = {

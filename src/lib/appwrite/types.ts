@@ -121,6 +121,49 @@ export interface SizeGuide extends Models.Document {
   unit: string;
 }
 
+export interface Customer extends Models.Document {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  billingAddress: string;
+  billingCity: string;
+  billingState: string;
+  billingPincode: string;
+  billingCountry: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingPincode: string;
+  shippingCountry: string;
+  gstin: string;
+  companyName: string;
+  landmark: string;
+  alternatePhone: string;
+  sameAsShipping: boolean;
+}
+
+export interface CartDocument extends Models.Document {
+  userId: string;
+  productId: string;
+  name: string;
+  price: number;
+  size: string;
+  color: string;
+  quantity: number;
+  image: string;
+}
+
+export interface WishlistDocument extends Models.Document {
+  userId: string;
+  productId: string;
+  name: string;
+  price: number;
+  image: string;
+  collectionSlug: string;
+}
+
 export interface Invoice extends Models.Document {
   invoiceNumber: string;
   invoiceDate: string;
