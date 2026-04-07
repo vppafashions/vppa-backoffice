@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, Receipt } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Invoice, InvoiceItem } from "@/lib/appwrite/types";
@@ -98,6 +98,197 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
     }, 300);
   };
 
+  const handlePrintThermal = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const itemsHtml = items
+      .map(
+        (item) =>
+          `<tr>
+            <td style="padding:2px 0;font-size:11px;border-bottom:1px dashed #ccc;">${item.name}</td>
+            <td style="padding:2px 4px;font-size:11px;text-align:center;border-bottom:1px dashed #ccc;">${item.quantity}</td>
+            <td style="padding:2px 0;font-size:11px;text-align:right;border-bottom:1px dashed #ccc;">${item.rate.toFixed(2)}</td>
+            <td style="padding:2px 0;font-size:11px;text-align:right;border-bottom:1px dashed #ccc;">${item.total.toFixed(2)}</td>
+          </tr>`,
+      )
+      .join("");
+
+    const hsnMap = new Map<
+      string,
+      { cgstRate: number; sgstRate: number; taxable: number; cgst: number; sgst: number }
+    >();
+    for (const it of items) {
+      const key = it.hsn;
+      const existing = hsnMap.get(key);
+      if (existing) {
+        existing.taxable += it.taxableValue;
+        existing.cgst += it.cgst;
+        existing.sgst += it.sgst;
+      } else {
+        hsnMap.set(key, {
+          cgstRate: it.cgstPercent ?? DEFAULT_CGST_RATE,
+          sgstRate: it.sgstPercent ?? DEFAULT_SGST_RATE,
+          taxable: it.taxableValue,
+          cgst: it.cgst,
+          sgst: it.sgst,
+        });
+      }
+    }
+
+    const taxLines = Array.from(hsnMap.entries())
+      .map(
+        ([hsn, data]) =>
+          `<tr>
+            <td style="font-size:10px;padding:1px 0;">${hsn}</td>
+            <td style="font-size:10px;padding:1px 0;text-align:right;">${data.taxable.toFixed(2)}</td>
+            <td style="font-size:10px;padding:1px 0;text-align:right;">${data.cgstRate}%</td>
+            <td style="font-size:10px;padding:1px 0;text-align:right;">${data.cgst.toFixed(2)}</td>
+            <td style="font-size:10px;padding:1px 0;text-align:right;">${data.sgstRate}%</td>
+            <td style="font-size:10px;padding:1px 0;text-align:right;">${data.sgst.toFixed(2)}</td>
+          </tr>`,
+      )
+      .join("");
+
+    const totalAfterTaxThermal = invoice.taxableAmount + invoice.totalTax;
+    const totalShippingThermal = invoice.shippingAmount || 0;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bill #${invoice.invoiceNumber}</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 2mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body {
+            width: 80mm;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #000;
+            background: #fff;
+          }
+          body { padding: 2mm; }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          .separator { border-top: 1px dashed #000; margin: 4px 0; }
+          .separator-double { border-top: 2px solid #000; margin: 4px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { vertical-align: top; }
+          @media print {
+            html, body { width: 80mm; padding: 0; margin: 0; }
+          }
+          @media screen {
+            body {
+              max-width: 80mm;
+              margin: 20px auto;
+              box-shadow: 0 0 10px rgba(0,0,0,0.15);
+              padding: 4mm;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- Logo & Header -->
+        <div class="center">
+          <img src="${VPPA_LOGO_DATA_URI}" alt="VPPA" style="width:40px;height:40px;" />
+          <div class="bold" style="font-size:14px;margin-top:2px;">${COMPANY.name}</div>
+          <div style="font-size:9px;margin-top:2px;">${COMPANY.address}</div>
+          <div style="font-size:9px;">Tel: ${COMPANY.phone} | ${COMPANY.email}</div>
+          <div style="font-size:9px;">GSTIN: ${COMPANY.gstin}</div>
+        </div>
+
+        <div class="separator-double"></div>
+        <div class="center bold" style="font-size:13px;">TAX INVOICE</div>
+        <div class="separator"></div>
+
+        <!-- Invoice Meta -->
+        <table style="font-size:10px;">
+          <tr><td>Bill No:</td><td class="right">${invoice.invoiceNumber}</td></tr>
+          <tr><td>Date:</td><td class="right">${formatDate(invoice.invoiceDate)}</td></tr>
+          ${invoice.orderNumber ? `<tr><td>Order:</td><td class="right">${invoice.orderNumber}</td></tr>` : ""}
+          ${invoice.modeOfTransport && invoice.modeOfTransport !== "-" ? `<tr><td>Transport:</td><td class="right">${invoice.modeOfTransport}</td></tr>` : ""}
+        </table>
+
+        <div class="separator"></div>
+
+        <!-- Customer -->
+        <div style="font-size:10px;">
+          <span class="bold">To: ${invoice.customerName}</span>
+          ${invoice.customerAddress ? `<br/>${invoice.customerAddress}` : ""}
+          ${invoice.customerState ? `<br/>${invoice.customerState}${invoice.customerPin ? " - " + invoice.customerPin : ""}` : ""}
+          ${invoice.customerPhone ? `<br/>Tel: ${invoice.customerPhone}` : ""}
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- Items -->
+        <table>
+          <tr style="border-bottom:1px solid #000;">
+            <th style="text-align:left;font-size:10px;padding:2px 0;">Item</th>
+            <th style="text-align:center;font-size:10px;padding:2px 4px;">Qty</th>
+            <th style="text-align:right;font-size:10px;padding:2px 0;">Rate</th>
+            <th style="text-align:right;font-size:10px;padding:2px 0;">Amt</th>
+          </tr>
+          ${itemsHtml}
+        </table>
+
+        <div class="separator-double"></div>
+
+        <!-- Totals -->
+        <table style="font-size:11px;">
+          <tr><td>Subtotal:</td><td class="right">${invoice.subtotal.toFixed(2)}</td></tr>
+          <tr><td>Taxable Amount:</td><td class="right">${invoice.taxableAmount.toFixed(2)}</td></tr>
+          <tr><td>CGST:</td><td class="right">${invoice.cgstAmount.toFixed(2)}</td></tr>
+          <tr><td>SGST:</td><td class="right">${invoice.sgstAmount.toFixed(2)}</td></tr>
+          <tr><td>Total Tax:</td><td class="right">${invoice.totalTax.toFixed(2)}</td></tr>
+          ${totalShippingThermal > 0 ? `<tr><td>Shipping:</td><td class="right">${totalShippingThermal.toFixed(2)}</td></tr>` : ""}
+          ${invoice.discount > 0 ? `<tr><td>Discount:</td><td class="right">-${invoice.discount.toFixed(2)}</td></tr>` : ""}
+        </table>
+
+        <div class="separator-double"></div>
+
+        <table style="font-size:13px;">
+          <tr class="bold"><td>GRAND TOTAL:</td><td class="right">Rs. ${invoice.grandTotal.toFixed(2)}</td></tr>
+        </table>
+
+        <div class="separator"></div>
+
+        <!-- HSN Tax Summary -->
+        <div class="center bold" style="font-size:9px;margin:2px 0;">GST SUMMARY</div>
+        <table>
+          <tr style="border-bottom:1px solid #000;">
+            <th style="font-size:8px;text-align:left;padding:1px 0;">HSN</th>
+            <th style="font-size:8px;text-align:right;padding:1px 0;">Taxable</th>
+            <th style="font-size:8px;text-align:right;padding:1px 0;">C%</th>
+            <th style="font-size:8px;text-align:right;padding:1px 0;">CGST</th>
+            <th style="font-size:8px;text-align:right;padding:1px 0;">S%</th>
+            <th style="font-size:8px;text-align:right;padding:1px 0;">SGST</th>
+          </tr>
+          ${taxLines}
+        </table>
+
+        <div class="separator"></div>
+
+        <div class="center" style="font-size:9px;margin-top:4px;">
+          <p>Thank you for shopping with us!</p>
+          <p style="margin-top:2px;">www.vppafashions.com</p>
+        </div>
+
+        <div style="margin-top:8px;"></div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 300);
+  };
+
   const totalAfterTax = invoice.taxableAmount + invoice.totalTax;
   const totalShipping = invoice.shippingAmount || 0;
 
@@ -108,6 +299,10 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
           Back to Invoices
         </Button>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrintThermal}>
+            <Receipt className="mr-2 size-4" />
+            Print Bill (80mm)
+          </Button>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 size-4" />
             Print / PDF
