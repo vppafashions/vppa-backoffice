@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Ruler,
   ShoppingBag,
+  Sticker,
   Users,
 } from "lucide-react";
 
@@ -73,6 +74,11 @@ export const sidebarItems: NavGroup[] = [
         title: "HSN Codes",
         url: "/dashboard/hsn-codes",
         icon: Hash,
+      },
+      {
+        title: "Sticker Printer",
+        url: "/dashboard/sticker-printer",
+        icon: Sticker,
       },
     ],
   },
