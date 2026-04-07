@@ -146,6 +146,118 @@ function buildStatusEmailHtml(
 </html>`;
 }
 
+function getReturnStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    requested: "Return Requested",
+    approved: "Return Approved",
+    rejected: "Return Rejected",
+    picked_up: "Item Picked Up",
+    refunded: "Refund Processed",
+  };
+  return labels[status] || status;
+}
+
+function getReturnStatusColor(status: string): string {
+  const colors: Record<string, string> = {
+    requested: "#f59e0b",
+    approved: "#3b82f6",
+    rejected: "#ef4444",
+    picked_up: "#8b5cf6",
+    refunded: "#22c55e",
+  };
+  return colors[status] || "#6b7280";
+}
+
+function buildReturnStatusEmailHtml(
+  customerName: string,
+  returnId: string,
+  orderId: string,
+  status: string,
+  items: Array<{ name: string; quantity: number; price: number; size?: string; color?: string }>,
+  refundAmount: number,
+  reason: string,
+): string {
+  const statusLabel = getReturnStatusLabel(status);
+  const statusColor = getReturnStatusColor(status);
+
+  let statusMessage = "";
+  switch (status) {
+    case "requested":
+      statusMessage = "We have received your return request and will review it shortly.";
+      break;
+    case "approved":
+      statusMessage = "Your return request has been approved. We will arrange pickup soon.";
+      break;
+    case "rejected":
+      statusMessage = "Unfortunately, your return request has been rejected. Please contact us for more details.";
+      break;
+    case "picked_up":
+      statusMessage = "Your return item has been picked up. We will process your refund shortly.";
+      break;
+    case "refunded":
+      statusMessage = `Your refund of &#8377;${refundAmount.toLocaleString("en-IN")} has been processed. It may take 5-7 business days to reflect in your account.`;
+      break;
+    default:
+      statusMessage = "Your return status has been updated.";
+  }
+
+  const itemsHtml = items
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${item.name}${item.size ? ` (${item.size})` : ""}${item.color ? ` - ${item.color}` : ""}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">&#8377;${(item.price * item.quantity).toLocaleString("en-IN")}</td>
+        </tr>`,
+    )
+    .join("");
+
+  const refundHtml =
+    status === "refunded" || refundAmount > 0
+      ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin:16px 0;">
+        <p style="margin:0;color:#065f46;font-weight:600;">Refund Amount: &#8377;${refundAmount.toLocaleString("en-IN")}</p>
+      </div>`
+      : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:20px;">
+    <div style="background:#000;padding:24px;text-align:center;border-radius:12px 12px 0 0;">
+      <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:2px;">VPPA FASHIONS</h1>
+    </div>
+    <div style="background:#fff;padding:32px;border-radius:0 0 12px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <div style="text-align:center;margin-bottom:24px;">
+        <span style="display:inline-block;background:${statusColor};color:#fff;padding:6px 16px;border-radius:20px;font-size:14px;font-weight:600;">${statusLabel}</span>
+      </div>
+      <p style="color:#374151;font-size:16px;line-height:1.6;">Hi ${customerName},</p>
+      <p style="color:#374151;font-size:16px;line-height:1.6;">${statusMessage}</p>
+      <p style="color:#6b7280;font-size:14px;">Return ID: <strong>${returnId.slice(0, 8)}</strong> | Order ID: <strong>${orderId.slice(0, 8)}</strong></p>
+      ${reason ? `<p style="color:#6b7280;font-size:14px;">Reason: ${reason}</p>` : ""}
+      ${refundHtml}
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:8px 12px;text-align:left;font-size:13px;color:#6b7280;border-bottom:2px solid #e5e7eb;">Item</th>
+            <th style="padding:8px 12px;text-align:center;font-size:13px;color:#6b7280;border-bottom:2px solid #e5e7eb;">Qty</th>
+            <th style="padding:8px 12px;text-align:right;font-size:13px;color:#6b7280;border-bottom:2px solid #e5e7eb;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">
+        VPPA Fashions | No.161/1, Ground Floor, 100 Feet Rd, 3rd Block, Sir M Vishveswaraya Layout, Ullal, Bengaluru, Karnataka 560110
+        <br/>Phone: +91 90716 91999 | GSTIN: 29DLFPG6129H1ZY
+        <br/>Email: vppafashions@gmail.com
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 function buildNewOrderAdminEmailHtml(
   customerName: string,
   email: string,
@@ -269,6 +381,29 @@ export async function POST(req: NextRequest) {
       const subject = `New Order Received! #${orderId.slice(0, 8)} - ₹${(total || 0).toLocaleString("en-IN")}`;
 
       const result = await sendEmail(adminEmail, subject, html);
+      return NextResponse.json({ success: true, result });
+    }
+
+    if (type === "return-status-change") {
+      const { customerName, customerEmail, returnId, orderId, status, items, refundAmount, reason } = body;
+
+      if (!customerEmail || !returnId || !status) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+
+      const parsedItems = typeof items === "string" ? JSON.parse(items) : items || [];
+      const html = buildReturnStatusEmailHtml(
+        customerName || "Customer",
+        returnId,
+        orderId,
+        status,
+        parsedItems,
+        refundAmount || 0,
+        reason || "",
+      );
+      const subject = `VPPA Fashions - Return ${getReturnStatusLabel(status)} | #${returnId.slice(0, 8)}`;
+
+      const result = await sendEmail(customerEmail, subject, html);
       return NextResponse.json({ success: true, result });
     }
 

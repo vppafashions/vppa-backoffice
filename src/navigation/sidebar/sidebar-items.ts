@@ -7,6 +7,7 @@ import {
   Layers,
   type LucideIcon,
   ReceiptText,
+  RotateCcw,
   Ruler,
   ShoppingBag,
   Users,
@@ -119,6 +120,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Invoices",
         url: "/dashboard/invoices",
         icon: FileText,
+      },
+      {
+        title: "Returns",
+        url: "/dashboard/returns",
+        icon: RotateCcw,
       },
       {
         title: "Customers",
