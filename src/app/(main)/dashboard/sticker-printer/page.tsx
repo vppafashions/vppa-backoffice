@@ -123,17 +123,30 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
-        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "28px", height: "28px", objectFit: "contain" }} />
+        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
         <span
           style={{
-            fontSize: "11pt",
+            fontSize: "14pt",
             fontWeight: 800,
-            letterSpacing: "1px",
+            letterSpacing: "1.5px",
             textTransform: "uppercase",
           }}
         >
           VPPA Fashions
         </span>
+      </div>
+
+      {/* MRP row */}
+      <div
+        style={{
+          fontSize: "14pt",
+          fontWeight: 800,
+          marginTop: "1mm",
+          width: "100%",
+          textAlign: "center",
+        }}
+      >
+        MRP {formatCurrency(product.originalPrice || product.price)}
       </div>
 
       {/* Price + QR code row */}
@@ -149,11 +162,11 @@ function Sticker({ product, variant }: StickerProps) {
         <div style={{ flex: 1, textAlign: "left" }}>
           <div
             style={{
-              fontSize: "14pt",
-              fontWeight: 800,
+              fontSize: "12pt",
+              fontWeight: 700,
             }}
           >
-            MRP {formatCurrency(product.originalPrice || product.price)}
+            Price {formatCurrency(product.price)}
           </div>
         </div>
         <div style={{ flexShrink: 0 }}>
