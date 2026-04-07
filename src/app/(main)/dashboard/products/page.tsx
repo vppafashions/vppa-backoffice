@@ -23,9 +23,10 @@ import {
   getCollectionSlugLabel,
   isCollectionSlug,
 } from "@/lib/appwrite/collection-slugs";
+import { getHsnCodes } from "@/lib/appwrite/hsn-codes";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
 import { getSizeGuides } from "@/lib/appwrite/size-guides";
-import type { Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
+import type { HsnCode, Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
 
 const PRODUCT_TYPES = [
   "Hoodie",
@@ -136,6 +137,7 @@ export default function ProductsPage() {
   const [colorImages, setColorImages] = useState<Record<string, string[]>>({});
   const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
   const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
+  const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -153,6 +155,11 @@ export default function ProductsPage() {
     fetchProducts();
     getSizeGuides()
       .then((res) => setSizeGuides(res.documents as SizeGuide[]))
+      .catch(() => {
+        /* ignore */
+      });
+    getHsnCodes()
+      .then((res) => setHsnCodes(res.documents as HsnCode[]))
       .catch(() => {
         /* ignore */
       });
@@ -576,13 +583,35 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="hsnCode">HSN Code *</Label>
-                <Input
-                  id="hsnCode"
-                  inputMode="numeric"
-                  value={form.hsnCode}
-                  placeholder="e.g. 6109"
-                  onChange={(e) => setForm({ ...form, hsnCode: e.target.value })}
-                />
+                <Select
+                  value={form.hsnCode || undefined}
+                  onValueChange={(value) => setForm({ ...form, hsnCode: value })}
+                >
+                  <SelectTrigger id="hsnCode" className="w-full">
+                    <SelectValue placeholder="Select HSN code" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hsnCodes.map((h) => (
+                      <SelectItem key={h.$id} value={h.code}>
+                        {h.code} - {h.description.slice(0, 40)}
+                        {h.description.length > 40 ? "..." : ""} ({h.cgstPercent + h.sgstPercent}% GST)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.hsnCode &&
+                  (() => {
+                    const matched = hsnCodes.find((h) => h.code === form.hsnCode);
+                    if (matched) {
+                      return (
+                        <p className="text-muted-foreground text-xs">
+                          CGST: {matched.cgstPercent}% | SGST: {matched.sgstPercent}% | Total GST:{" "}
+                          {matched.cgstPercent + matched.sgstPercent}%
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stockQuantity">Stock Quantity *</Label>

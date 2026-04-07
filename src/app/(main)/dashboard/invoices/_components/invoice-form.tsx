@@ -12,15 +12,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { getHsnCodes } from "@/lib/appwrite/hsn-codes";
 import { createInvoice, getNextInvoiceNumber, updateInvoice } from "@/lib/appwrite/invoices";
-import type { Invoice, InvoiceItem } from "@/lib/appwrite/types";
+import type { HsnCode, Invoice, InvoiceItem } from "@/lib/appwrite/types";
 import {
-  CGST_RATE,
   calculateInvoiceItem,
   calculateInvoiceTotals,
-  GST_RATE,
-  HSN_CODE,
-  SGST_RATE,
+  DEFAULT_CGST_RATE,
+  DEFAULT_HSN_CODE,
+  DEFAULT_SGST_RATE,
 } from "@/lib/invoice-pdf";
 
 interface InvoiceFormProps {
@@ -34,9 +34,22 @@ interface ItemRow {
   quantity: string;
   rate: string;
   originalRate: string;
+  hsnCodeId: string;
+  hsn: string;
+  cgstPercent: number;
+  sgstPercent: number;
 }
 
-const emptyItemRow: ItemRow = { name: "", quantity: "1", rate: "", originalRate: "" };
+const emptyItemRow: ItemRow = {
+  name: "",
+  quantity: "1",
+  rate: "",
+  originalRate: "",
+  hsnCodeId: "",
+  hsn: DEFAULT_HSN_CODE,
+  cgstPercent: DEFAULT_CGST_RATE,
+  sgstPercent: DEFAULT_SGST_RATE,
+};
 
 const INDIAN_STATES: Record<string, string> = {
   "AN (35)": "Andaman and Nicobar Islands",
@@ -96,6 +109,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
   const [discount, setDiscount] = useState("0");
   const [status, setStatus] = useState<Invoice["status"]>("draft");
   const [saving, setSaving] = useState(false);
+  const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
 
   const loadInvoiceNumber = useCallback(async () => {
     if (!invoice) {
@@ -106,6 +120,11 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
 
   useEffect(() => {
     loadInvoiceNumber();
+    getHsnCodes()
+      .then((res) => setHsnCodes(res.documents as HsnCode[]))
+      .catch(() => {
+        /* ignore */
+      });
   }, [loadInvoiceNumber]);
 
   useEffect(() => {
@@ -135,6 +154,10 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             quantity: String(item.quantity),
             rate: String(item.rate),
             originalRate: String(item.originalRate || item.rate),
+            hsnCodeId: "",
+            hsn: item.hsn || DEFAULT_HSN_CODE,
+            cgstPercent: item.cgstPercent ?? DEFAULT_CGST_RATE,
+            sgstPercent: item.sgstPercent ?? DEFAULT_SGST_RATE,
           })),
         );
       } catch {
@@ -173,6 +196,9 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
         Number.parseFloat(row.quantity) || 1,
         Number.parseFloat(row.rate) || 0,
         Number.parseFloat(row.originalRate) || Number.parseFloat(row.rate) || 0,
+        row.hsn,
+        row.cgstPercent,
+        row.sgstPercent,
       ),
     );
 
@@ -366,11 +392,11 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[300px]">Item</TableHead>
+                <TableHead className="w-[250px]">Item</TableHead>
                 <TableHead className="w-[80px]">Qty</TableHead>
                 <TableHead className="w-[120px]">Original Rate</TableHead>
                 <TableHead className="w-[120px]">Rate (INR)</TableHead>
-                <TableHead>HSN</TableHead>
+                <TableHead className="w-[160px]">HSN Code</TableHead>
                 <TableHead>GST</TableHead>
                 <TableHead>Taxable Val</TableHead>
                 <TableHead>CGST</TableHead>
@@ -380,8 +406,8 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
               </TableRow>
             </TableHeader>
             <TableBody>
-              {itemRows.map((row) => {
-                const rowKey = `${row.name}-${row.rate}-${row.quantity}`;
+              {itemRows.map((row, idx) => {
+                const rowKey = `item-${idx}`;
                 const computed =
                   row.name && row.rate
                     ? calculateInvoiceItem(
@@ -389,9 +415,11 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                         Number.parseFloat(row.quantity) || 1,
                         Number.parseFloat(row.rate) || 0,
                         Number.parseFloat(row.originalRate) || Number.parseFloat(row.rate) || 0,
+                        row.hsn,
+                        row.cgstPercent,
+                        row.sgstPercent,
                       )
                     : null;
-                const idx = itemRows.indexOf(row);
                 return (
                   <TableRow key={rowKey}>
                     <TableCell>
@@ -425,11 +453,67 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                         placeholder="Selling price"
                       />
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{HSN_CODE}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{GST_RATE}%</TableCell>
+                    <TableCell>
+                      <Select
+                        value={row.hsnCodeId || "custom"}
+                        onValueChange={(value) => {
+                          if (value === "custom") {
+                            setItemRows((prev) =>
+                              prev.map((r, i) =>
+                                i === idx
+                                  ? {
+                                      ...r,
+                                      hsnCodeId: "",
+                                      hsn: DEFAULT_HSN_CODE,
+                                      cgstPercent: DEFAULT_CGST_RATE,
+                                      sgstPercent: DEFAULT_SGST_RATE,
+                                    }
+                                  : r,
+                              ),
+                            );
+                          } else {
+                            const selected = hsnCodes.find((h) => h.$id === value);
+                            if (selected) {
+                              setItemRows((prev) =>
+                                prev.map((r, i) =>
+                                  i === idx
+                                    ? {
+                                        ...r,
+                                        hsnCodeId: selected.$id,
+                                        hsn: selected.code,
+                                        cgstPercent: selected.cgstPercent,
+                                        sgstPercent: selected.sgstPercent,
+                                      }
+                                    : r,
+                                ),
+                              );
+                            }
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Select HSN" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom">Custom</SelectItem>
+                          {hsnCodes.map((h) => (
+                            <SelectItem key={h.$id} value={h.$id}>
+                              {h.code} ({h.cgstPercent + h.sgstPercent}%)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {row.cgstPercent + row.sgstPercent}%
+                    </TableCell>
                     <TableCell className="text-sm">{computed ? formatRs(computed.taxableValue) : "-"}</TableCell>
-                    <TableCell className="text-sm">{computed ? formatRs(computed.cgst) : "-"}</TableCell>
-                    <TableCell className="text-sm">{computed ? formatRs(computed.sgst) : "-"}</TableCell>
+                    <TableCell className="text-sm">
+                      {computed ? `${formatRs(computed.cgst)} (${row.cgstPercent}%)` : "-"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {computed ? `${formatRs(computed.sgst)} (${row.sgstPercent}%)` : "-"}
+                    </TableCell>
                     <TableCell className="font-medium text-sm">{computed ? formatRs(computed.total) : "-"}</TableCell>
                     <TableCell>
                       {itemRows.length > 1 && (
@@ -509,31 +593,56 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
       {/* Tax Breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle>Tax Breakdown</CardTitle>
+          <CardTitle>Tax Breakdown (per HSN)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>HSN/SAC</TableHead>
-                <TableHead>Central Tax Rate</TableHead>
-                <TableHead>Central Tax Amount</TableHead>
-                <TableHead>State Tax Rate</TableHead>
-                <TableHead>State Tax Amount</TableHead>
-                <TableHead>Integrated Tax Rate</TableHead>
-                <TableHead>Integrated Tax Amount</TableHead>
+                <TableHead>Taxable Value</TableHead>
+                <TableHead>CGST Rate</TableHead>
+                <TableHead>CGST Amount</TableHead>
+                <TableHead>SGST Rate</TableHead>
+                <TableHead>SGST Amount</TableHead>
+                <TableHead>Total Tax</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell>{HSN_CODE}</TableCell>
-                <TableCell>{CGST_RATE}%</TableCell>
-                <TableCell>{formatRs(totals.cgstAmount)}</TableCell>
-                <TableCell>{SGST_RATE}%</TableCell>
-                <TableCell>{formatRs(totals.sgstAmount)}</TableCell>
-                <TableCell>0%</TableCell>
-                <TableCell>Rs. 0.00</TableCell>
-              </TableRow>
+              {(() => {
+                const hsnMap = new Map<
+                  string,
+                  { taxable: number; cgstRate: number; sgstRate: number; cgst: number; sgst: number }
+                >();
+                for (const item of computedItems) {
+                  const key = item.hsn;
+                  const existing = hsnMap.get(key);
+                  if (existing) {
+                    existing.taxable += item.taxableValue;
+                    existing.cgst += item.cgst;
+                    existing.sgst += item.sgst;
+                  } else {
+                    hsnMap.set(key, {
+                      taxable: item.taxableValue,
+                      cgstRate: item.cgstPercent ?? DEFAULT_CGST_RATE,
+                      sgstRate: item.sgstPercent ?? DEFAULT_SGST_RATE,
+                      cgst: item.cgst,
+                      sgst: item.sgst,
+                    });
+                  }
+                }
+                return Array.from(hsnMap.entries()).map(([hsn, data]) => (
+                  <TableRow key={hsn}>
+                    <TableCell className="font-mono">{hsn}</TableCell>
+                    <TableCell>{formatRs(data.taxable)}</TableCell>
+                    <TableCell>{data.cgstRate}%</TableCell>
+                    <TableCell>{formatRs(data.cgst)}</TableCell>
+                    <TableCell>{data.sgstRate}%</TableCell>
+                    <TableCell>{formatRs(data.sgst)}</TableCell>
+                    <TableCell className="font-medium">{formatRs(data.cgst + data.sgst)}</TableCell>
+                  </TableRow>
+                ));
+              })()}
             </TableBody>
           </Table>
         </CardContent>

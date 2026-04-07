@@ -6,7 +6,7 @@ import { Download, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Invoice, InvoiceItem } from "@/lib/appwrite/types";
-import { CGST_RATE, COMPANY, HSN_CODE, numberToWords, SGST_RATE } from "@/lib/invoice-pdf";
+import { COMPANY, DEFAULT_CGST_RATE, DEFAULT_SGST_RATE, numberToWords } from "@/lib/invoice-pdf";
 import { VPPA_LOGO_DATA_URI } from "@/lib/vppa-logo";
 
 interface InvoicePdfViewProps {
@@ -298,9 +298,13 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
                 </td>
                 <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
                   {formatRs(item.cgst)}
+                  <br />
+                  <span style={{ fontSize: 9, color: "#666" }}>@{item.cgstPercent ?? DEFAULT_CGST_RATE}%</span>
                 </td>
                 <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
                   {formatRs(item.sgst)}
+                  <br />
+                  <span style={{ fontSize: 9, color: "#666" }}>@{item.sgstPercent ?? DEFAULT_SGST_RATE}%</span>
                 </td>
                 <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
                   {formatRs(item.total)}
@@ -368,19 +372,46 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>{HSN_CODE}</td>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>{CGST_RATE}</td>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>
-                        {invoice.cgstAmount.toFixed(2)}
-                      </td>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>{SGST_RATE}</td>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>
-                        {invoice.sgstAmount.toFixed(2)}
-                      </td>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>0</td>
-                      <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>0</td>
-                    </tr>
+                    {(() => {
+                      const hsnMap = new Map<
+                        string,
+                        { cgstRate: number; sgstRate: number; cgst: number; sgst: number }
+                      >();
+                      for (const it of items) {
+                        const key = it.hsn;
+                        const existing = hsnMap.get(key);
+                        if (existing) {
+                          existing.cgst += it.cgst;
+                          existing.sgst += it.sgst;
+                        } else {
+                          hsnMap.set(key, {
+                            cgstRate: it.cgstPercent ?? DEFAULT_CGST_RATE,
+                            sgstRate: it.sgstPercent ?? DEFAULT_SGST_RATE,
+                            cgst: it.cgst,
+                            sgst: it.sgst,
+                          });
+                        }
+                      }
+                      return Array.from(hsnMap.entries()).map(([hsn, data]) => (
+                        <tr key={hsn}>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>{hsn}</td>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>
+                            {data.cgstRate}%
+                          </td>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>
+                            {data.cgst.toFixed(2)}
+                          </td>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>
+                            {data.sgstRate}%
+                          </td>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>
+                            {data.sgst.toFixed(2)}
+                          </td>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>0</td>
+                          <td style={{ border: "1px solid #000", padding: "3px", textAlign: "center" }}>0</td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
                 <div style={{ padding: "6px", fontSize: 10 }}>
