@@ -136,20 +136,7 @@ function Sticker({ product, variant }: StickerProps) {
         </span>
       </div>
 
-      {/* MRP row */}
-      <div
-        style={{
-          fontSize: "14pt",
-          fontWeight: 800,
-          marginTop: "1mm",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        MRP {formatCurrency(product.originalPrice || product.price)}
-      </div>
-
-      {/* Price + QR code row */}
+      {/* MRP + QR code row */}
       <div
         style={{
           display: "flex",
@@ -162,15 +149,15 @@ function Sticker({ product, variant }: StickerProps) {
         <div style={{ flex: 1, textAlign: "left" }}>
           <div
             style={{
-              fontSize: "12pt",
-              fontWeight: 700,
+              fontSize: "14pt",
+              fontWeight: 800,
             }}
           >
-            Price {formatCurrency(product.price)}
+            MRP {formatCurrency(product.originalPrice || product.price)}
           </div>
         </div>
         <div style={{ flexShrink: 0 }}>
-          <QRCodeSVG value={productUrl} size={60} level="M" />
+          <QRCodeSVG value={productUrl} size={55} level="M" />
         </div>
       </div>
 
@@ -212,7 +199,7 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
-        <BarcodeSVG value={itemCode} width={1.2} height={32} fontSize={10} />
+        <BarcodeSVG value={itemCode} width={1.2} height={28} fontSize={9} />
       </div>
 
       {/* Description */}
@@ -225,7 +212,7 @@ function Sticker({ product, variant }: StickerProps) {
           textAlign: "center",
           lineHeight: 1.2,
           overflow: "hidden",
-          maxHeight: "28pt",
+          maxHeight: "22pt",
         }}
       >
         {product.description
@@ -256,8 +243,8 @@ function Sticker({ product, variant }: StickerProps) {
           alignItems: "center",
         }}
       >
-        <QRCodeSVG value={websiteUrl} size={42} level="M" />
-        <span style={{ fontSize: "6pt", color: "#666", marginTop: "1mm" }}>www.vppafashions.com</span>
+        <QRCodeSVG value={websiteUrl} size={38} level="M" />
+        <span style={{ fontSize: "6pt", color: "#666", marginTop: "0.5mm" }}>www.vppafashions.com</span>
       </div>
     </div>
   );
