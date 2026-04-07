@@ -98,7 +98,7 @@ function Sticker({ product, variant }: StickerProps) {
     <div
       className="sticker-unit"
       style={{
-        width: "60mm",
+        width: "50mm",
         height: "100mm",
         border: "1px solid #ccc",
         padding: "3mm",
@@ -123,12 +123,12 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
-        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
+        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
         <span
           style={{
-            fontSize: "14pt",
+            fontSize: "12pt",
             fontWeight: 800,
-            letterSpacing: "1.5px",
+            letterSpacing: "1px",
             textTransform: "uppercase",
           }}
         >
@@ -157,7 +157,7 @@ function Sticker({ product, variant }: StickerProps) {
           </div>
         </div>
         <div style={{ flexShrink: 0 }}>
-          <QRCodeSVG value={productUrl} size={55} level="M" />
+          <QRCodeSVG value={productUrl} size={48} level="M" />
         </div>
       </div>
 
@@ -199,7 +199,7 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
-        <BarcodeSVG value={itemCode} width={1.2} height={28} fontSize={9} />
+        <BarcodeSVG value={itemCode} width={1} height={26} fontSize={8} />
       </div>
 
       {/* Description */}
@@ -216,8 +216,8 @@ function Sticker({ product, variant }: StickerProps) {
         }}
       >
         {product.description
-          ? product.description.length > 120
-            ? `${product.description.slice(0, 120)}...`
+          ? product.description.length > 80
+            ? `${product.description.slice(0, 80)}...`
             : product.description
           : ""}
       </div>
@@ -398,7 +398,7 @@ export default function StickerPrinterPage() {
             position: absolute;
             left: 0;
             top: 0;
-            width: 60mm;
+            width: 50mm;
           }
           .print-sheet {
             display: block !important;
@@ -415,7 +415,7 @@ export default function StickerPrinterPage() {
             page-break-after: auto !important;
           }
           @page {
-            size: 60mm 100mm;
+            size: 50mm 100mm;
             margin: 0;
           }
         }
@@ -424,7 +424,7 @@ export default function StickerPrinterPage() {
       <div className="@container/main flex flex-col gap-4 md:gap-6 print:hidden">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">Sticker Printer</h1>
-          <p className="text-muted-foreground text-sm">Generate and print 60mm x 100mm product stickers</p>
+          <p className="text-muted-foreground text-sm">Generate and print 50mm x 100mm product stickers</p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
