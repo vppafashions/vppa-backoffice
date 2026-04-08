@@ -250,11 +250,10 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
             fontSize: "11pt",
             fontWeight: 800,
             letterSpacing: "1px",
-            textTransform: "uppercase",
             whiteSpace: "nowrap",
           }}
         >
-          VPPA FASHIONS
+          VPPA fashions
         </span>
       </div>
 
