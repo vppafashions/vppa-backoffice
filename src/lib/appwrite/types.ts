@@ -197,6 +197,20 @@ export interface ReturnItem {
   color: string;
 }
 
+export interface Coupon extends Models.Document {
+  code: string;
+  description: string;
+  discountType: "percentage" | "flat";
+  discountValue: number;
+  minOrderAmount: number;
+  maxDiscount: number;
+  active: boolean;
+  expiresAt: string;
+  usageLimit: number;
+  usedCount: number;
+  applicableProductIds: string;
+}
+
 export interface Invoice extends Models.Document {
   invoiceNumber: string;
   invoiceDate: string;

@@ -21,6 +21,7 @@ export const COLLECTION_IDS = {
   carts: "carts",
   wishlists: "wishlists",
   returns: "returns",
+  coupons: "coupons",
 } as const;
 
 export const CLOUDINARY = {
