@@ -133,6 +133,8 @@ interface ProductForm {
   returnPolicy: string;
   sizeGuideId: string;
   gender: string;
+  stickerLabel1: string;
+  stickerLabel2: string;
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -200,6 +202,8 @@ const emptyForm: ProductForm = {
   returnPolicy: "",
   sizeGuideId: "",
   gender: "Unisex",
+  stickerLabel1: "",
+  stickerLabel2: "",
 };
 
 export default function ProductsPage() {
@@ -280,6 +284,8 @@ export default function ProductsPage() {
       returnPolicy: product.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
+      stickerLabel1: product.stickerLabel1 || "",
+      stickerLabel2: product.stickerLabel2 || "",
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -387,6 +393,8 @@ export default function ProductsPage() {
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         sizeGuideId: form.sizeGuideId,
         gender: form.gender || "Unisex",
+        stickerLabel1: form.stickerLabel1,
+        stickerLabel2: form.stickerLabel2,
       };
 
       if (editingProduct) {
@@ -611,6 +619,30 @@ export default function ProductsPage() {
                 rows={3}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="stickerLabel1">Sticker Label 1</Label>
+                <Input
+                  id="stickerLabel1"
+                  value={form.stickerLabel1}
+                  placeholder="e.g. DRY WASH ONLY"
+                  onChange={(e) => setForm({ ...form, stickerLabel1: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stickerLabel2">Sticker Label 2</Label>
+                <Input
+                  id="stickerLabel2"
+                  value={form.stickerLabel2}
+                  placeholder="e.g. 100% COTTON"
+                  onChange={(e) => setForm({ ...form, stickerLabel2: e.target.value })}
+                />
+              </div>
+            </div>
+            <p className="text-muted-foreground text-xs -mt-2">
+              Short text printed on product stickers (leave blank to hide)
+            </p>
 
             <div className="space-y-2">
               <Label htmlFor="fabricCare">Fabric & Care</Label>

@@ -199,6 +199,23 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
           <BarcodeSVG value={itemCode} width={1.5} height={30} fontSize={10} />
         </div>
 
+        {/* Sticker Labels */}
+        {(product.stickerLabel1 || product.stickerLabel2) && (
+          <div
+            style={{
+              fontSize: "6pt",
+              fontWeight: 700,
+              width: "100%",
+              textAlign: "center",
+              lineHeight: 1.3,
+            }}
+          >
+            {product.stickerLabel1 && <span>{product.stickerLabel1}</span>}
+            {product.stickerLabel1 && product.stickerLabel2 && <span> | </span>}
+            {product.stickerLabel2 && <span>{product.stickerLabel2}</span>}
+          </div>
+        )}
+
         {/* Bottom row: website + MADE IN INDIA */}
         <div
           style={{
@@ -323,25 +340,22 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
         <BarcodeSVG value={itemCode} width={1.5} height={38} fontSize={10} />
       </div>
 
-      {/* Description */}
-      <div
-        style={{
-          fontSize: "7pt",
-          color: "#444",
-          marginTop: "1mm",
-          width: "100%",
-          textAlign: "center",
-          lineHeight: 1.2,
-          overflow: "hidden",
-          maxHeight: "22pt",
-        }}
-      >
-        {product.description
-          ? product.description.length > 80
-            ? `${product.description.slice(0, 80)}...`
-            : product.description
-          : ""}
-      </div>
+      {/* Sticker Labels */}
+      {(product.stickerLabel1 || product.stickerLabel2) && (
+        <div
+          style={{
+            fontSize: "7pt",
+            fontWeight: 700,
+            marginTop: "1mm",
+            width: "100%",
+            textAlign: "center",
+            lineHeight: 1.4,
+          }}
+        >
+          {product.stickerLabel1 && <div>{product.stickerLabel1}</div>}
+          {product.stickerLabel2 && <div>{product.stickerLabel2}</div>}
+        </div>
+      )}
 
       {/* MADE IN INDIA */}
       <div
