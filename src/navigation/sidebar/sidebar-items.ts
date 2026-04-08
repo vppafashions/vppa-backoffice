@@ -11,6 +11,7 @@ import {
   Ruler,
   ShoppingBag,
   Sticker,
+  Tag,
   Users,
 } from "lucide-react";
 
@@ -136,6 +137,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Customers",
         url: "/dashboard/customers",
         icon: Users,
+      },
+      {
+        title: "Coupons",
+        url: "/dashboard/coupons",
+        icon: Tag,
       },
     ],
   },
