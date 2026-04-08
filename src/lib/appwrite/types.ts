@@ -28,6 +28,8 @@ export interface Product extends Models.Document {
   colorImages: string;
   sizeGuideId: string;
   gender: string;
+  stickerLabel1: string;
+  stickerLabel2: string;
 }
 
 export interface VariantInventoryItem {
