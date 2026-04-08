@@ -391,6 +391,36 @@ function PrintSheet({ items, stickerSize }: { items: PrintItem[]; stickerSize: S
     }
   }
 
+  // For 50x50: roll has 2 labels per row, so duplicate each sticker side by side
+  if (stickerSize === "50x50") {
+    return (
+      <div
+        className="print-sheet"
+        style={{
+          display: "block",
+          padding: 0,
+        }}
+      >
+        {stickers.map((s, i) => (
+          <div
+            key={`row-${i}`}
+            className="sticker-row"
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              width: "100mm",
+              height: "50mm",
+              pageBreakAfter: "always",
+            }}
+          >
+            <Sticker product={s.product} variant={s.variant} stickerSize={stickerSize} />
+            <Sticker product={s.product} variant={s.variant} stickerSize={stickerSize} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className="print-sheet"
@@ -521,11 +551,31 @@ export default function StickerPrinterPage() {
             position: absolute;
             left: 0;
             top: 0;
-            width: 50mm;
+            width: ${stickerSize === "50x50" ? "100mm" : "50mm"};
           }
           .print-sheet {
             display: block !important;
             padding: 0 !important;
+          }
+          .sticker-row {
+            display: flex !important;
+            flex-direction: row !important;
+            width: 100mm !important;
+            height: 50mm !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            transform: rotate(180deg) !important;
+            transform-origin: center center !important;
+          }
+          .sticker-row:last-child {
+            page-break-after: auto !important;
+          }
+          .sticker-row .sticker-unit {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 2mm !important;
           }
           .sticker-unit {
             page-break-after: always !important;
@@ -540,7 +590,7 @@ export default function StickerPrinterPage() {
             page-break-after: auto !important;
           }
           @page {
-            size: 50mm ${stickerSize === "50x50" ? "50mm" : "100mm"};
+            size: ${stickerSize === "50x50" ? "100mm 50mm" : "50mm 100mm"};
             margin: 0;
           }
         }
