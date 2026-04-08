@@ -79,20 +79,154 @@ function BarcodeSVG({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Single Sticker component (60mm x 100mm)                           */
+/*  Sticker size type                                                  */
+/* ------------------------------------------------------------------ */
+
+type StickerSize = "50x100" | "50x50";
+
+/* ------------------------------------------------------------------ */
+/*  Single Sticker component                                           */
 /* ------------------------------------------------------------------ */
 
 interface StickerProps {
   product: Product;
   variant: VariantInventoryItem;
+  stickerSize?: StickerSize;
 }
 
-function Sticker({ product, variant }: StickerProps) {
+function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
   const productUrl = `https://vppafashions.com/product/${product.$id}`;
   const websiteUrl = "https://vppafashions.com";
   // Ensure full 13-digit item code, pad with leading zeros if needed
   const rawCode = variant.itemCode || product.itemCode || "";
   const itemCode = rawCode.padStart(13, "0");
+
+  if (stickerSize === "50x50") {
+    return (
+      <div
+        className="sticker-unit"
+        style={{
+          width: "50mm",
+          height: "50mm",
+          border: "1px solid #ccc",
+          padding: "2mm",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "space-between",
+          fontFamily: "Arial, Helvetica, sans-serif",
+          boxSizing: "border-box",
+          pageBreakInside: "avoid",
+          backgroundColor: "#fff",
+          overflow: "hidden",
+        }}
+      >
+        {/* Top: Brand with logo */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "1.5mm",
+            width: "100%",
+            justifyContent: "center",
+          }}
+        >
+          <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "22px", height: "22px", objectFit: "contain" }} />
+          <span
+            style={{
+              fontSize: "10pt",
+              fontWeight: 800,
+              letterSpacing: "0.5px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            VPPA fashions
+          </span>
+        </div>
+
+        {/* MRP + QR code row */}
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: "0.5mm",
+          }}
+        >
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div
+              style={{
+                fontSize: "12pt",
+                fontWeight: 800,
+              }}
+            >
+              RS:
+              {(product.originalPrice || product.price).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+          </div>
+          <div style={{ flexShrink: 0 }}>
+            <QRCodeSVG value={productUrl} size={38} level="M" />
+          </div>
+        </div>
+
+        {/* Product Name */}
+        <div
+          style={{
+            fontSize: "8pt",
+            fontWeight: 600,
+            width: "100%",
+            textAlign: "center",
+            lineHeight: 1.2,
+            overflow: "hidden",
+            maxHeight: "20pt",
+          }}
+        >
+          {product.name}
+        </div>
+
+        {/* Barcode (Item Code) */}
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <BarcodeSVG value={itemCode} width={1.5} height={30} fontSize={10} />
+        </div>
+
+        {/* Bottom: DRY WASH ONLY (optional care) */}
+        <div
+          style={{
+            fontSize: "7pt",
+            fontWeight: 700,
+            letterSpacing: "0.3px",
+          }}
+        >
+          DRY WASH ONLY
+        </div>
+
+        {/* Bottom row: website + MADE IN INDIA */}
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: "6pt", color: "#444", fontWeight: 600, textTransform: "uppercase" }}>
+            www.vppafashions.com
+          </span>
+          <span style={{ fontSize: "7pt", fontWeight: 700, letterSpacing: "0.3px" }}>MADE IN INDIA</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -261,7 +395,7 @@ interface PrintItem {
   quantity: number;
 }
 
-function PrintSheet({ items }: { items: PrintItem[] }) {
+function PrintSheet({ items, stickerSize }: { items: PrintItem[]; stickerSize: StickerSize }) {
   // Expand items by quantity
   const stickers: { product: Product; variant: VariantInventoryItem }[] = [];
   for (const item of items) {
@@ -279,7 +413,7 @@ function PrintSheet({ items }: { items: PrintItem[] }) {
       }}
     >
       {stickers.map((s, i) => (
-        <Sticker key={`sticker-${i}`} product={s.product} variant={s.variant} />
+        <Sticker key={`sticker-${i}`} product={s.product} variant={s.variant} stickerSize={stickerSize} />
       ))}
     </div>
   );
@@ -297,6 +431,7 @@ export default function StickerPrinterPage() {
   const [selectedVariantIdx, setSelectedVariantIdx] = useState<string>("");
   const [printItems, setPrintItems] = useState<PrintItem[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [stickerSize, setStickerSize] = useState<StickerSize>("50x100");
   const printRef = useRef<HTMLDivElement>(null);
 
   const fetchProducts = useCallback(async () => {
@@ -418,7 +553,7 @@ export default function StickerPrinterPage() {
             page-break-after: auto !important;
           }
           @page {
-            size: 50mm 100mm;
+            size: 50mm ${stickerSize === "50x50" ? "50mm" : "100mm"};
             margin: 0;
           }
         }
@@ -427,7 +562,7 @@ export default function StickerPrinterPage() {
       <div className="@container/main flex flex-col gap-4 md:gap-6 print:hidden">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">Sticker Printer</h1>
-          <p className="text-muted-foreground text-sm">Generate and print 50mm x 100mm product stickers</p>
+          <p className="text-muted-foreground text-sm">Generate and print product stickers</p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -437,6 +572,20 @@ export default function StickerPrinterPage() {
               <CardTitle>Select Product Variant</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Sticker size selector */}
+              <div className="space-y-2">
+                <Label>Sticker Size</Label>
+                <Select value={stickerSize} onValueChange={(v) => setStickerSize(v as StickerSize)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="50x100">50mm × 100mm (Tall)</SelectItem>
+                    <SelectItem value="50x50">50mm × 50mm (Square)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Search by item code */}
               <div className="space-y-2">
                 <Label>Search by Item Code or Product Name</Label>
@@ -569,7 +718,7 @@ export default function StickerPrinterPage() {
             <CardContent className="flex items-center justify-center">
               {selectedProduct && currentVariant ? (
                 <div className="rounded-lg border bg-white p-2 shadow-sm">
-                  <Sticker product={selectedProduct} variant={currentVariant} />
+                  <Sticker product={selectedProduct} variant={currentVariant} stickerSize={stickerSize} />
                 </div>
               ) : (
                 <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
@@ -651,7 +800,7 @@ export default function StickerPrinterPage() {
 
       {/* Hidden print area */}
       <div ref={printRef} className="print-area hidden print:block">
-        <PrintSheet items={printItems} />
+        <PrintSheet items={printItems} stickerSize={stickerSize} />
       </div>
     </>
   );
