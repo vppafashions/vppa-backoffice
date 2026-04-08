@@ -199,30 +199,17 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
           <BarcodeSVG value={itemCode} width={1.5} height={30} fontSize={10} />
         </div>
 
-        {/* Bottom: DRY WASH ONLY (optional care) */}
-        <div
-          style={{
-            fontSize: "7pt",
-            fontWeight: 700,
-            letterSpacing: "0.3px",
-          }}
-        >
-          DRY WASH ONLY
-        </div>
-
         {/* Bottom row: website + MADE IN INDIA */}
         <div
           style={{
             display: "flex",
             width: "100%",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: "flex-end",
           }}
         >
-          <span style={{ fontSize: "6pt", color: "#444", fontWeight: 600, textTransform: "uppercase" }}>
-            www.vppafashions.com
-          </span>
-          <span style={{ fontSize: "7pt", fontWeight: 700, letterSpacing: "0.3px" }}>MADE IN INDIA</span>
+          <span style={{ fontSize: "6pt", color: "#444", fontWeight: 600 }}>WWW.VPPAFASHIONS.COM</span>
+          <span style={{ fontSize: "6pt", fontWeight: 700 }}>MADE IN INDIA</span>
         </div>
       </div>
     );
