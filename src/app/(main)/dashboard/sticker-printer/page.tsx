@@ -755,7 +755,14 @@ export default function StickerPrinterPage() {
             <CardContent className="flex items-center justify-center">
               {selectedProduct && currentVariant ? (
                 <div className="rounded-lg border bg-white p-2 shadow-sm">
-                  <Sticker product={selectedProduct} variant={currentVariant} stickerSize={stickerSize} />
+                  {stickerSize === "50x50" ? (
+                    <div style={{ display: "flex", flexDirection: "row", gap: 0 }}>
+                      <Sticker product={selectedProduct} variant={currentVariant} stickerSize={stickerSize} />
+                      <Sticker product={selectedProduct} variant={currentVariant} stickerSize={stickerSize} />
+                    </div>
+                  ) : (
+                    <Sticker product={selectedProduct} variant={currentVariant} stickerSize={stickerSize} />
+                  )}
                 </div>
               ) : (
                 <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
