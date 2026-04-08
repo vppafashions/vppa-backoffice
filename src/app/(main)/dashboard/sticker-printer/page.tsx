@@ -123,16 +123,17 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
-        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
+        <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "28px", height: "28px", objectFit: "contain" }} />
         <span
           style={{
-            fontSize: "12pt",
+            fontSize: "11pt",
             fontWeight: 800,
             letterSpacing: "1px",
             textTransform: "uppercase",
+            whiteSpace: "nowrap",
           }}
         >
-          VPPA Fashions
+          VPPA FASHIONS
         </span>
       </div>
 
@@ -199,7 +200,7 @@ function Sticker({ product, variant }: StickerProps) {
           justifyContent: "center",
         }}
       >
-        <BarcodeSVG value={itemCode} width={1} height={26} fontSize={8} />
+        <BarcodeSVG value={itemCode} width={1.5} height={38} fontSize={10} />
       </div>
 
       {/* Description */}
