@@ -393,8 +393,6 @@ export default function ProductsPage() {
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         sizeGuideId: form.sizeGuideId,
         gender: form.gender || "Unisex",
-        stickerLabel1: form.stickerLabel1,
-        stickerLabel2: form.stickerLabel2,
       };
 
       if (editingProduct) {
