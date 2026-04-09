@@ -126,7 +126,6 @@ interface ProductForm {
   stockQuantity: string;
   displayOnMainPage: boolean;
   displayOnCollectionPage: boolean;
-  featured: boolean;
   slug: string;
   productType: string;
   fabricCare: string;
@@ -135,6 +134,16 @@ interface ProductForm {
   gender: string;
   stickerLabel1: string;
   stickerLabel2: string;
+}
+
+function parseStickerLabels(raw: string | undefined | null): { label1: string; label2: string } {
+  if (!raw) return { label1: "", label2: "" };
+  try {
+    const parsed = JSON.parse(raw);
+    return { label1: parsed.label1 || "", label2: parsed.label2 || "" };
+  } catch {
+    return { label1: "", label2: "" };
+  }
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -195,7 +204,6 @@ const emptyForm: ProductForm = {
   stockQuantity: "0",
   displayOnMainPage: false,
   displayOnCollectionPage: true,
-  featured: false,
   slug: "",
   productType: "",
   fabricCare: "",
@@ -277,15 +285,14 @@ export default function ProductsPage() {
       stockQuantity: String(product.stockQuantity ?? 0),
       displayOnMainPage: product.displayOnMainPage ?? false,
       displayOnCollectionPage: product.displayOnCollectionPage ?? true,
-      featured: product.featured || false,
       slug: product.slug || "",
       productType: product.productType || "",
       fabricCare: product.fabricCare || "",
       returnPolicy: product.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
-      stickerLabel1: product.stickerLabel1 || "",
-      stickerLabel2: product.stickerLabel2 || "",
+      stickerLabel1: parseStickerLabels(product.stickerLabels).label1,
+      stickerLabel2: parseStickerLabels(product.stickerLabels).label2,
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -382,7 +389,6 @@ export default function ProductsPage() {
         stockQuantity,
         displayOnMainPage: form.displayOnMainPage,
         displayOnCollectionPage: form.displayOnCollectionPage,
-        featured: form.featured,
         inStock: stockQuantity > 0,
         slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
         productType: form.productType,
@@ -393,6 +399,10 @@ export default function ProductsPage() {
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         sizeGuideId: form.sizeGuideId,
         gender: form.gender || "Unisex",
+        stickerLabels:
+          form.stickerLabel1 || form.stickerLabel2
+            ? JSON.stringify({ label1: form.stickerLabel1, label2: form.stickerLabel2 })
+            : "",
       };
 
       if (editingProduct) {
@@ -891,14 +901,6 @@ export default function ProductsPage() {
                   onCheckedChange={(checked) => setForm({ ...form, displayOnCollectionPage: checked })}
                 />
                 <Label htmlFor="displayOnCollectionPage">Display on Collection Page</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="featured"
-                  checked={form.featured}
-                  onCheckedChange={(checked) => setForm({ ...form, featured: checked })}
-                />
-                <Label htmlFor="featured">Featured</Label>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <span>Stock status updates automatically from quantity</span>
