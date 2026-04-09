@@ -32,6 +32,16 @@ function parseVariants(raw: string | undefined | null): VariantInventoryItem[] {
   return [];
 }
 
+function parseStickerLabels(raw: string | undefined | null): { label1: string; label2: string } {
+  if (!raw) return { label1: "", label2: "" };
+  try {
+    const parsed = JSON.parse(raw);
+    return { label1: parsed.label1 || "", label2: parsed.label2 || "" };
+  } catch {
+    return { label1: "", label2: "" };
+  }
+}
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -200,21 +210,24 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
         </div>
 
         {/* Sticker Labels */}
-        {(product.stickerLabel1 || product.stickerLabel2) && (
-          <div
-            style={{
-              fontSize: "6pt",
-              fontWeight: 700,
-              width: "100%",
-              textAlign: "center",
-              lineHeight: 1.3,
-            }}
-          >
-            {product.stickerLabel1 && <span>{product.stickerLabel1}</span>}
-            {product.stickerLabel1 && product.stickerLabel2 && <span> | </span>}
-            {product.stickerLabel2 && <span>{product.stickerLabel2}</span>}
-          </div>
-        )}
+        {(() => {
+          const sl = parseStickerLabels(product.stickerLabels);
+          return sl.label1 || sl.label2 ? (
+            <div
+              style={{
+                fontSize: "6pt",
+                fontWeight: 700,
+                width: "100%",
+                textAlign: "center",
+                lineHeight: 1.3,
+              }}
+            >
+              {sl.label1 && <span>{sl.label1}</span>}
+              {sl.label1 && sl.label2 && <span> | </span>}
+              {sl.label2 && <span>{sl.label2}</span>}
+            </div>
+          ) : null;
+        })()}
 
         {/* Bottom row: website + MADE IN INDIA */}
         <div
@@ -341,21 +354,24 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
       </div>
 
       {/* Sticker Labels */}
-      {(product.stickerLabel1 || product.stickerLabel2) && (
-        <div
-          style={{
-            fontSize: "7pt",
-            fontWeight: 700,
-            marginTop: "1mm",
-            width: "100%",
-            textAlign: "center",
-            lineHeight: 1.4,
-          }}
-        >
-          {product.stickerLabel1 && <div>{product.stickerLabel1}</div>}
-          {product.stickerLabel2 && <div>{product.stickerLabel2}</div>}
-        </div>
-      )}
+      {(() => {
+        const sl = parseStickerLabels(product.stickerLabels);
+        return sl.label1 || sl.label2 ? (
+          <div
+            style={{
+              fontSize: "7pt",
+              fontWeight: 700,
+              marginTop: "1mm",
+              width: "100%",
+              textAlign: "center",
+              lineHeight: 1.4,
+            }}
+          >
+            {sl.label1 && <div>{sl.label1}</div>}
+            {sl.label2 && <div>{sl.label2}</div>}
+          </div>
+        ) : null;
+      })()}
 
       {/* MADE IN INDIA */}
       <div

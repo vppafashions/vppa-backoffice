@@ -17,7 +17,6 @@ export interface Product extends Models.Document {
   stockQuantity: number;
   displayOnMainPage: boolean;
   displayOnCollectionPage: boolean;
-  featured: boolean;
   inStock: boolean;
   slug: string;
   productType: string;
@@ -28,8 +27,7 @@ export interface Product extends Models.Document {
   colorImages: string;
   sizeGuideId: string;
   gender: string;
-  stickerLabel1: string;
-  stickerLabel2: string;
+  stickerLabels: string;
 }
 
 export interface VariantInventoryItem {
