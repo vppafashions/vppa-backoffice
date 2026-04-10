@@ -22,6 +22,11 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  maxLength?: number;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 }
 
 function ToolbarButton({
@@ -55,6 +60,7 @@ export function RichTextEditor({
   onChange,
   placeholder,
   className,
+  maxLength,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -163,6 +169,22 @@ export function RichTextEditor({
       </div>
 
       <EditorContent editor={editor} />
+
+      {maxLength != null && (
+        <div className="px-3 py-1 text-right">
+          <span
+            className={cn(
+              "text-xs",
+              stripHtml(value || "").length > maxLength
+                ? "text-red-500 font-medium"
+                : "text-muted-foreground",
+            )}
+          >
+            {stripHtml(value || "").length}/{maxLength}
+            {stripHtml(value || "").length > maxLength && " — exceeds limit!"}
+          </span>
+        </div>
+      )}
 
       {!value && placeholder && (
         <style>{`
