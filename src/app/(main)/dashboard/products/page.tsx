@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -549,6 +550,7 @@ export default function ProductsPage() {
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <CharCount current={form.name.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="productType">Product Type *</Label>
@@ -599,6 +601,7 @@ export default function ProductsPage() {
                   placeholder="auto-generated"
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                 />
+                <CharCount current={form.slug.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label>SKU</Label>
@@ -617,6 +620,7 @@ export default function ProductsPage() {
                 value={form.description}
                 onChange={(val) => setForm({ ...form, description: val })}
                 placeholder="Enter product description..."
+                maxLength={1000}
               />
             </div>
 
@@ -629,6 +633,7 @@ export default function ProductsPage() {
                   placeholder="e.g. DRY WASH ONLY"
                   onChange={(e) => setForm({ ...form, stickerLabel1: e.target.value })}
                 />
+                <CharCount current={form.stickerLabel1.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stickerLabel2">Sticker Label 2</Label>
@@ -638,6 +643,7 @@ export default function ProductsPage() {
                   placeholder="e.g. 100% COTTON"
                   onChange={(e) => setForm({ ...form, stickerLabel2: e.target.value })}
                 />
+                <CharCount current={form.stickerLabel2.length} max={255} />
               </div>
             </div>
             <p className="text-muted-foreground text-xs -mt-2">
@@ -650,6 +656,7 @@ export default function ProductsPage() {
                 value={form.fabricCare}
                 onChange={(val) => setForm({ ...form, fabricCare: val })}
                 placeholder="e.g. 100% Cotton, Machine wash cold, Tumble dry low"
+                maxLength={1000}
               />
             </div>
 
@@ -662,6 +669,7 @@ export default function ProductsPage() {
                 onChange={(e) => setForm({ ...form, returnPolicy: e.target.value })}
                 rows={3}
               />
+              <CharCount current={form.returnPolicy.length} max={500} />
             </div>
 
             <div className="space-y-2">
@@ -758,6 +766,7 @@ export default function ProductsPage() {
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                 />
+                <CharCount current={form.category.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="collectionSlug">Collection Slug</Label>
@@ -788,6 +797,7 @@ export default function ProductsPage() {
                   placeholder="S, M, L, XL"
                   onChange={(e) => setForm({ ...form, sizes: e.target.value })}
                 />
+                <CharCount current={form.sizes.length} max={1000} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="colors">Colors (comma-separated)</Label>
@@ -797,6 +807,7 @@ export default function ProductsPage() {
                   placeholder="Black, Navy, White"
                   onChange={(e) => setForm({ ...form, colors: e.target.value })}
                 />
+                <CharCount current={form.colors.length} max={1000} />
               </div>
             </div>
 

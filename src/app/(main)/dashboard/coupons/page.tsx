@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -400,6 +401,7 @@ export default function CouponsPage() {
                 }
                 className="font-mono uppercase"
               />
+              <CharCount current={form.code.length} max={50} />
             </div>
 
             {/* Description */}
@@ -412,6 +414,7 @@ export default function CouponsPage() {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={2}
               />
+              <CharCount current={form.description.length} max={500} />
             </div>
 
             {/* Discount Type + Value */}

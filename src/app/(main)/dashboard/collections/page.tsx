@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -224,6 +225,7 @@ export default function CollectionsPage() {
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <CharCount current={form.name.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug *</Label>
@@ -233,6 +235,7 @@ export default function CollectionsPage() {
                   placeholder="e.g. velocity"
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                 />
+                <CharCount current={form.slug.length} max={255} />
               </div>
             </div>
 
@@ -243,6 +246,7 @@ export default function CollectionsPage() {
                 value={form.tagline}
                 onChange={(e) => setForm({ ...form, tagline: e.target.value })}
               />
+              <CharCount current={form.tagline.length} max={500} />
             </div>
 
             <div className="space-y-2">
@@ -253,6 +257,7 @@ export default function CollectionsPage() {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3}
               />
+              <CharCount current={form.description.length} max={5000} />
             </div>
 
             <div className="space-y-2">

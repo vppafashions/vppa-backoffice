@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -284,6 +285,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Invoice No *</Label>
               <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+              <CharCount current={invoiceNumber.length} max={50} />
             </div>
             <div className="space-y-2">
               <Label>Invoice Date *</Label>
@@ -296,6 +298,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                 placeholder={`#VPPA${invoiceNumber}IN`}
                 onChange={(e) => setOrderNumber(e.target.value)}
               />
+              <CharCount current={orderNumber.length} max={50} />
             </div>
             <div className="space-y-2">
               <Label>Order Date</Label>
@@ -304,6 +307,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Mode of Transport</Label>
               <Input value={modeOfTransport} onChange={(e) => setModeOfTransport(e.target.value)} placeholder="-" />
+              <CharCount current={modeOfTransport.length} max={100} />
             </div>
             <div className="space-y-2">
               <Label>State Code</Label>
@@ -323,6 +327,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Place of Supply</Label>
               <Input value={placeOfSupply} onChange={(e) => setPlaceOfSupply(e.target.value)} />
+              <CharCount current={placeOfSupply.length} max={255} />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
@@ -352,26 +357,32 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Customer Name *</Label>
               <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <CharCount current={customerName.length} max={255} />
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
+              <CharCount current={customerEmail.length} max={255} />
             </div>
             <div className="col-span-2 space-y-2">
               <Label>Address</Label>
               <Textarea value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} rows={2} />
+              <CharCount current={customerAddress.length} max={500} />
             </div>
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+              <CharCount current={customerPhone.length} max={50} />
             </div>
             <div className="space-y-2">
               <Label>PIN Code</Label>
               <Input value={customerPin} onChange={(e) => setCustomerPin(e.target.value)} />
+              <CharCount current={customerPin.length} max={20} />
             </div>
             <div className="space-y-2">
               <Label>State</Label>
               <Input value={customerState} onChange={(e) => setCustomerState(e.target.value)} />
+              <CharCount current={customerState.length} max={100} />
             </div>
           </div>
         </CardContent>
