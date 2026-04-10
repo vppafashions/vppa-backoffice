@@ -13,7 +13,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +44,18 @@ const PRODUCT_TYPES = [
 ] as const;
 
 const GENDERS = ["Men", "Women", "Unisex", "Kids"] as const;
+
+function generateSlug(gender: string, productType: string, name: string): string {
+  const g = gender?.toLowerCase() || "unisex";
+  const t = productType?.toLowerCase().replace(/\s+/g, "-") || "";
+  const n =
+    name
+      ?.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-") || "";
+  const parts = [g, t, n].filter(Boolean);
+  return `/${parts.join("/")}`;
+}
 
 const GENDER_CODE: Record<string, string> = { Men: "1", Women: "2", Unisex: "3", Kids: "4" };
 
@@ -386,7 +398,7 @@ export default function ProductsPage() {
         displayOnCollectionPage: form.displayOnCollectionPage,
         featured: form.featured,
         inStock: stockQuantity > 0,
-        slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
+        slug: form.slug || generateSlug(form.gender, form.productType, form.name),
         productType: form.productType,
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
@@ -549,26 +561,36 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
-                <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setForm((prev) => ({
+                      ...prev,
+                      name: newName,
+                      slug: generateSlug(prev.gender, prev.productType, newName),
+                    }));
+                  }}
+                />
                 <CharCount current={form.name.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="productType">Product Type *</Label>
-                <Select
+                <SearchableSelect
+                  id="productType"
                   value={form.productType || undefined}
-                  onValueChange={(value) => setForm({ ...form, productType: value })}
-                >
-                  <SelectTrigger id="productType" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRODUCT_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      productType: value,
+                      slug: generateSlug(prev.gender, value, prev.name),
+                    }))
+                  }
+                  options={PRODUCT_TYPES.map((t) => ({ value: t, label: t }))}
+                  placeholder="Select type"
+                  searchPlaceholder="Search types..."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="itemCode">Product ID *</Label>
@@ -580,18 +602,20 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender *</Label>
-                <Select value={form.gender || "Unisex"} onValueChange={(value) => setForm({ ...form, gender: value })}>
-                  <SelectTrigger id="gender" className="w-full">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GENDERS.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="gender"
+                  value={form.gender || "Unisex"}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      gender: value,
+                      slug: generateSlug(value, prev.productType, prev.name),
+                    }))
+                  }
+                  options={GENDERS.map((g) => ({ value: g, label: g }))}
+                  placeholder="Select gender"
+                  searchPlaceholder="Search..."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
@@ -674,22 +698,19 @@ export default function ProductsPage() {
 
             <div className="space-y-2">
               <Label>Size Guide</Label>
-              <Select
+              <SearchableSelect
                 value={form.sizeGuideId || "none"}
                 onValueChange={(value) => setForm({ ...form, sizeGuideId: value === "none" ? "" : value })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a size guide" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No size guide</SelectItem>
-                  {sizeGuides.map((sg) => (
-                    <SelectItem key={sg.$id} value={sg.$id}>
-                      {sg.name} ({sg.gender} – {sg.clothingType})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: "none", label: "No size guide" },
+                  ...sizeGuides.map((sg) => ({
+                    value: sg.$id,
+                    label: `${sg.name} (${sg.gender} – ${sg.clothingType})`,
+                  })),
+                ]}
+                placeholder="Select a size guide"
+                searchPlaceholder="Search size guides..."
+              />
               <p className="text-muted-foreground text-xs">
                 Link a size guide to show on the product page. Manage guides in Catalog &rarr; Size Guides.
               </p>
@@ -719,22 +740,17 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="hsnCode">HSN Code *</Label>
-                <Select
+                <SearchableSelect
+                  id="hsnCode"
                   value={form.hsnCode || undefined}
                   onValueChange={(value) => setForm({ ...form, hsnCode: value })}
-                >
-                  <SelectTrigger id="hsnCode" className="w-full">
-                    <SelectValue placeholder="Select HSN code" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {hsnCodes.map((h) => (
-                      <SelectItem key={h.$id} value={h.code}>
-                        {h.code} - {h.description.slice(0, 40)}
-                        {h.description.length > 40 ? "..." : ""} ({h.cgstPercent + h.sgstPercent}% GST)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={hsnCodes.map((h) => ({
+                    value: h.code,
+                    label: `${h.code} - ${h.description.slice(0, 40)}${h.description.length > 40 ? "..." : ""} (${h.cgstPercent + h.sgstPercent}% GST)`,
+                  }))}
+                  placeholder="Select HSN code"
+                  searchPlaceholder="Search HSN codes..."
+                />
                 {form.hsnCode &&
                   (() => {
                     const matched = hsnCodes.find((h) => h.code === form.hsnCode);
@@ -770,21 +786,14 @@ export default function ProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="collectionSlug">Collection Slug</Label>
-                <Select
+                <SearchableSelect
+                  id="collectionSlug"
                   value={form.collectionSlug || undefined}
                   onValueChange={(value) => setForm({ ...form, collectionSlug: value as CollectionSlug })}
-                >
-                  <SelectTrigger id="collectionSlug" className="w-full">
-                    <SelectValue placeholder="Select a collection" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COLLECTION_SLUG_VALUES.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {COLLECTION_SLUG_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={COLLECTION_SLUG_VALUES.map((v) => ({ value: v, label: COLLECTION_SLUG_LABELS[v] }))}
+                  placeholder="Select a collection"
+                  searchPlaceholder="Search collections..."
+                />
               </div>
             </div>
 

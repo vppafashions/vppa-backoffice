@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createSizeGuide, deleteSizeGuide, getSizeGuides, updateSizeGuide } from "@/lib/appwrite/size-guides";
 import type { SizeGuide } from "@/lib/appwrite/types";
@@ -622,63 +622,42 @@ export default function SizeGuidesPage() {
               </div>
               <div className="space-y-2">
                 <Label>Unit</Label>
-                <Select value={form.unit} onValueChange={(value) => setForm({ ...form, unit: value })}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNIT_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={form.unit}
+                  onValueChange={(value) => setForm({ ...form, unit: value })}
+                  options={UNIT_OPTIONS}
+                  placeholder="Select unit"
+                  searchPlaceholder="Search..."
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Gender *</Label>
-                <Select
+                <SearchableSelect
                   value={form.gender || undefined}
                   onValueChange={(value) => {
                     setForm({ ...form, gender: value });
                     if (form.clothingType) handlePresetLoad(value, form.clothingType);
                   }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GENDER_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={GENDER_OPTIONS}
+                  placeholder="Select gender"
+                  searchPlaceholder="Search..."
+                />
               </div>
               <div className="space-y-2">
                 <Label>Clothing Type *</Label>
-                <Select
+                <SearchableSelect
                   value={form.clothingType || undefined}
                   onValueChange={(value) => {
                     setForm({ ...form, clothingType: value });
                     if (form.gender) handlePresetLoad(form.gender, value);
                   }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CLOTHING_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={CLOTHING_TYPES.map((t) => ({ value: t, label: t }))}
+                  placeholder="Select type"
+                  searchPlaceholder="Search types..."
+                />
               </div>
             </div>
 
