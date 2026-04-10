@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CharCount } from "@/components/ui/char-count";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { getHsnCodes } from "@/lib/appwrite/hsn-codes";
@@ -311,18 +311,16 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             </div>
             <div className="space-y-2">
               <Label>State Code</Label>
-              <Select value={stateCode} onValueChange={handleStateChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(INDIAN_STATES).map(([code, name]) => (
-                    <SelectItem key={code} value={code}>
-                      {code} - {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={stateCode}
+                onValueChange={handleStateChange}
+                options={Object.entries(INDIAN_STATES).map(([code, name]) => ({
+                  value: code,
+                  label: `${code} - ${name}`,
+                }))}
+                placeholder="Select state"
+                searchPlaceholder="Search states..."
+              />
             </div>
             <div className="space-y-2">
               <Label>Place of Supply</Label>
@@ -331,17 +329,18 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as Invoice["status"])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={status}
+                onValueChange={(v) => setStatus(v as Invoice["status"])}
+                options={[
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent" },
+                  { value: "paid", label: "Paid" },
+                  { value: "cancelled", label: "Cancelled" },
+                ]}
+                placeholder="Select status"
+                searchPlaceholder="Search..."
+              />
             </div>
           </div>
         </CardContent>
@@ -465,7 +464,8 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                       />
                     </TableCell>
                     <TableCell>
-                      <Select
+                      <SearchableSelect
+                        className="w-[160px]"
                         value={row.hsnCodeId || "custom"}
                         onValueChange={(value) => {
                           if (value === "custom") {
@@ -501,19 +501,16 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                             }
                           }
                         }}
-                      >
-                        <SelectTrigger className="w-[160px]">
-                          <SelectValue placeholder="Select HSN" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="custom">Custom</SelectItem>
-                          {hsnCodes.map((h) => (
-                            <SelectItem key={h.$id} value={h.$id}>
-                              {h.code} ({h.cgstPercent + h.sgstPercent}%)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        options={[
+                          { value: "custom", label: "Custom" },
+                          ...hsnCodes.map((h) => ({
+                            value: h.$id,
+                            label: `${h.code} (${h.cgstPercent + h.sgstPercent}%)`,
+                          })),
+                        ]}
+                        placeholder="Select HSN"
+                        searchPlaceholder="Search HSN..."
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {row.cgstPercent + row.sgstPercent}%

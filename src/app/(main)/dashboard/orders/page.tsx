@@ -11,7 +11,7 @@ import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getOrders, sendOrderStatusEmail, updateOrderStatus, updateOrderTracking } from "@/lib/appwrite/orders";
 import type { Order, OrderItem, StatusTimeline } from "@/lib/appwrite/types";
@@ -229,7 +229,7 @@ export default function OrdersPage() {
 
               <div className="space-y-2">
                 <Label>Update Status</Label>
-                <Select
+                <SearchableSelect
                   value={selectedOrder.status}
                   onValueChange={(value) => {
                     handleStatusChange(selectedOrder.$id, value as Order["status"], selectedOrder.statusTimeline);
@@ -241,18 +241,16 @@ export default function OrdersPage() {
                       statusTimeline: JSON.stringify(timeline),
                     });
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: "pending", label: "Pending" },
+                    { value: "confirmed", label: "Confirmed" },
+                    { value: "shipped", label: "Shipped" },
+                    { value: "delivered", label: "Delivered" },
+                    { value: "cancelled", label: "Cancelled" },
+                  ]}
+                  placeholder="Select status"
+                  searchPlaceholder="Search..."
+                />
               </div>
 
               {/* Status Timeline */}
@@ -309,24 +307,25 @@ export default function OrdersPage() {
                 <Label className="font-semibold">Shipping & Tracking</Label>
                 <div className="space-y-2">
                   <Label className="text-muted-foreground text-xs">Courier</Label>
-                  <Select value={courier} onValueChange={setCourier}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select courier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BlueDart">BlueDart</SelectItem>
-                      <SelectItem value="DTDC">DTDC</SelectItem>
-                      <SelectItem value="Delhivery">Delhivery</SelectItem>
-                      <SelectItem value="FedEx">FedEx</SelectItem>
-                      <SelectItem value="DHL">DHL</SelectItem>
-                      <SelectItem value="India Post">India Post</SelectItem>
-                      <SelectItem value="Ekart">Ekart</SelectItem>
-                      <SelectItem value="Shadowfax">Shadowfax</SelectItem>
-                      <SelectItem value="Xpressbees">Xpressbees</SelectItem>
-                      <SelectItem value="Ecom Express">Ecom Express</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={courier}
+                    onValueChange={setCourier}
+                    options={[
+                      { value: "BlueDart", label: "BlueDart" },
+                      { value: "DTDC", label: "DTDC" },
+                      { value: "Delhivery", label: "Delhivery" },
+                      { value: "FedEx", label: "FedEx" },
+                      { value: "DHL", label: "DHL" },
+                      { value: "India Post", label: "India Post" },
+                      { value: "Ekart", label: "Ekart" },
+                      { value: "Shadowfax", label: "Shadowfax" },
+                      { value: "Xpressbees", label: "Xpressbees" },
+                      { value: "Ecom Express", label: "Ecom Express" },
+                      { value: "Other", label: "Other" },
+                    ]}
+                    placeholder="Select courier"
+                    searchPlaceholder="Search couriers..."
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-muted-foreground text-xs">Tracking Number</Label>
