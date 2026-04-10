@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -611,12 +612,11 @@ export default function ProductsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <Label>Description</Label>
+              <RichTextEditor
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
+                onChange={(val) => setForm({ ...form, description: val })}
+                placeholder="Enter product description..."
               />
             </div>
 
@@ -645,13 +645,11 @@ export default function ProductsPage() {
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="fabricCare">Fabric & Care</Label>
-              <Textarea
-                id="fabricCare"
+              <Label>Fabric & Care</Label>
+              <RichTextEditor
                 value={form.fabricCare}
+                onChange={(val) => setForm({ ...form, fabricCare: val })}
                 placeholder="e.g. 100% Cotton, Machine wash cold, Tumble dry low"
-                onChange={(e) => setForm({ ...form, fabricCare: e.target.value })}
-                rows={3}
               />
             </div>
 
