@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +149,11 @@ interface ProductForm {
   gender: string;
   stickerLabel1: string;
   stickerLabel2: string;
+  metaTitle: string;
+  metaDescription: string;
+  seoKeywords: string;
+  ogTitle: string;
+  ogDescription: string;
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -195,6 +200,23 @@ function totalVariantStock(variants: VariantInventoryItem[]): number {
   return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
 }
 
+function parseSeoData(raw: string | undefined | null): {
+  metaTitle: string;
+  metaDescription: string;
+  seoKeywords: string;
+  ogTitle: string;
+  ogDescription: string;
+} {
+  const defaults = { metaTitle: "", metaDescription: "", seoKeywords: "", ogTitle: "", ogDescription: "" };
+  if (!raw) return defaults;
+  try {
+    const parsed = JSON.parse(raw);
+    return { ...defaults, ...parsed };
+  } catch {
+    return defaults;
+  }
+}
+
 const emptyForm: ProductForm = {
   name: "",
   itemCode: "",
@@ -218,6 +240,11 @@ const emptyForm: ProductForm = {
   gender: "Unisex",
   stickerLabel1: "",
   stickerLabel2: "",
+  metaTitle: "",
+  metaDescription: "",
+  seoKeywords: "",
+  ogTitle: "",
+  ogDescription: "",
 };
 
 export default function ProductsPage() {
@@ -236,6 +263,7 @@ export default function ProductsPage() {
   const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
   const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
+  const [generatingSeo, setGeneratingSeo] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -300,6 +328,7 @@ export default function ProductsPage() {
       gender: product.gender || "Unisex",
       stickerLabel1: product.stickerLabel1 || "",
       stickerLabel2: product.stickerLabel2 || "",
+      ...parseSeoData(product.seoData),
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -409,6 +438,13 @@ export default function ProductsPage() {
         gender: form.gender || "Unisex",
         stickerLabel1: form.stickerLabel1,
         stickerLabel2: form.stickerLabel2,
+        seoData: JSON.stringify({
+          metaTitle: form.metaTitle,
+          metaDescription: form.metaDescription,
+          seoKeywords: form.seoKeywords,
+          ogTitle: form.ogTitle,
+          ogDescription: form.ogDescription,
+        }),
       };
 
       if (editingProduct) {
@@ -1010,6 +1046,123 @@ export default function ProductsPage() {
                   ))}
               </div>
             )}
+
+            {/* SEO Section */}
+            <div className="space-y-3 rounded-md border border-dashed p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-semibold">SEO & Social</Label>
+                  <p className="text-muted-foreground text-xs">
+                    AI-powered meta tags for search engines and social media
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={generatingSeo || !form.name}
+                  onClick={async () => {
+                    setGeneratingSeo(true);
+                    try {
+                      const res = await fetch("/api/generate-seo", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: form.name,
+                          productType: form.productType,
+                          gender: form.gender,
+                          category: form.category,
+                          description: form.description,
+                          price: form.price,
+                          colors: form.colors,
+                          sizes: form.sizes,
+                        }),
+                      });
+                      if (!res.ok) throw new Error("Generation failed");
+                      const seo = await res.json();
+                      setForm((prev) => ({
+                        ...prev,
+                        metaTitle: seo.metaTitle || prev.metaTitle,
+                        metaDescription: seo.metaDescription || prev.metaDescription,
+                        seoKeywords: seo.seoKeywords || prev.seoKeywords,
+                        ogTitle: seo.ogTitle || prev.ogTitle,
+                        ogDescription: seo.ogDescription || prev.ogDescription,
+                      }));
+                      toast.success("SEO content generated!");
+                    } catch {
+                      toast.error("Failed to generate SEO content");
+                    } finally {
+                      setGeneratingSeo(false);
+                    }
+                  }}
+                >
+                  {generatingSeo ? (
+                    <>
+                      <Loader2 className="mr-1 size-3 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-1 size-3" />
+                      Generate SEO
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metaTitle">Meta Title</Label>
+                <Input
+                  id="metaTitle"
+                  value={form.metaTitle}
+                  placeholder="SEO title for search results (50-60 chars)"
+                  onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
+                />
+                <CharCount current={form.metaTitle.length} max={60} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metaDescription">Meta Description</Label>
+                <Textarea
+                  id="metaDescription"
+                  value={form.metaDescription}
+                  placeholder="Compelling description for search results (140-160 chars)"
+                  onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
+                  rows={2}
+                />
+                <CharCount current={form.metaDescription.length} max={160} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="seoKeywords">SEO Keywords</Label>
+                <Input
+                  id="seoKeywords"
+                  value={form.seoKeywords}
+                  placeholder="comma-separated keywords"
+                  onChange={(e) => setForm({ ...form, seoKeywords: e.target.value })}
+                />
+                <CharCount current={form.seoKeywords.length} max={500} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ogTitle">OG Title (Social)</Label>
+                  <Input
+                    id="ogTitle"
+                    value={form.ogTitle}
+                    placeholder="Title for social sharing"
+                    onChange={(e) => setForm({ ...form, ogTitle: e.target.value })}
+                  />
+                  <CharCount current={form.ogTitle.length} max={70} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ogDescription">OG Description (Social)</Label>
+                  <Input
+                    id="ogDescription"
+                    value={form.ogDescription}
+                    placeholder="Description for social sharing"
+                    onChange={(e) => setForm({ ...form, ogDescription: e.target.value })}
+                  />
+                  <CharCount current={form.ogDescription.length} max={120} />
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label>Images (Default Gallery)</Label>
