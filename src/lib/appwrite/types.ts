@@ -24,6 +24,7 @@ export interface Product extends Models.Document {
   sku: string;
   variantInventory: string;
   fabricCare: string;
+  fabricCare2: string;
   returnPolicy: string;
   colorImages: string;
   sizeGuideId: string;

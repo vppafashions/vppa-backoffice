@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
@@ -8,6 +9,14 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +37,7 @@ import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/
 import { getSizeGuides } from "@/lib/appwrite/size-guides";
 import type { HsnCode, Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
 
-const PRODUCT_TYPES = [
+const DEFAULT_PRODUCT_TYPES = [
   "Hoodie",
   "Sweatshirt",
   "T-Shirt",
@@ -39,7 +48,8 @@ const PRODUCT_TYPES = [
   "Shorts",
   "Cap",
   "Accessory",
-] as const;
+  "Cargo Pant",
+];
 
 const GENDERS = ["Men", "Women", "Unisex", "Kids"] as const;
 
@@ -223,6 +233,15 @@ export default function ProductsPage() {
   const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
 
+  // Build dynamic product type options from defaults + types already used by existing products
+  const productTypeOptions = React.useMemo(() => {
+    const types = new Set(DEFAULT_PRODUCT_TYPES);
+    for (const p of products) {
+      if (p.productType) types.add(p.productType);
+    }
+    return Array.from(types).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
   const fetchProducts = useCallback(async () => {
     try {
       const res = await getProducts();
@@ -280,7 +299,7 @@ export default function ProductsPage() {
       featured: product.featured || false,
       slug: product.slug || "",
       productType: product.productType || "",
-      fabricCare: product.fabricCare || "",
+      fabricCare: product.fabricCare2 || product.fabricCare || "",
       returnPolicy: product.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
@@ -388,7 +407,7 @@ export default function ProductsPage() {
         productType: form.productType,
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
-        fabricCare: form.fabricCare,
+        fabricCare2: form.fabricCare,
         returnPolicy: form.returnPolicy,
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         sizeGuideId: form.sizeGuideId,
@@ -551,21 +570,22 @@ export default function ProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="productType">Product Type *</Label>
-                <Select
-                  value={form.productType || undefined}
-                  onValueChange={(value) => setForm({ ...form, productType: value })}
+                <Combobox
+                  value={form.productType}
+                  onValueChange={(value) => setForm({ ...form, productType: value as string })}
                 >
-                  <SelectTrigger id="productType" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRODUCT_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <ComboboxInput placeholder="Search or add type..." />
+                  <ComboboxContent>
+                    <ComboboxList>
+                      <ComboboxEmpty>Type to add a new product type</ComboboxEmpty>
+                      {productTypeOptions.map((t) => (
+                        <ComboboxItem key={t} value={t}>
+                          {t}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="itemCode">Product ID *</Label>
