@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   className?: string;
   disabled?: boolean;
   id?: string;
+  creatable?: boolean;
 }
 
 export function SearchableSelect({
@@ -33,14 +34,15 @@ export function SearchableSelect({
   className,
   disabled = false,
   id,
+  creatable = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
 
   const selectedLabel = React.useMemo(() => {
     const found = options.find((o) => o.value === value);
-    return found?.label;
-  }, [options, value]);
+    return found?.label ?? (creatable && value ? value : undefined);
+  }, [options, value, creatable]);
 
   const filtered = React.useMemo(() => {
     if (!search) return options;
@@ -84,10 +86,24 @@ export function SearchableSelect({
           />
         </div>
         <div className="max-h-60 overflow-y-auto p-1">
-          {filtered.length === 0 && (
+          {filtered.length === 0 && !creatable && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               {emptyMessage}
             </p>
+          )}
+          {creatable && search.trim() && !options.some((o) => o.value.toLowerCase() === search.trim().toLowerCase()) && (
+            <button
+              type="button"
+              className="relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground text-primary"
+              onClick={() => {
+                onValueChange(search.trim());
+                setOpen(false);
+                setSearch("");
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="truncate">Add "{search.trim()}"</span>
+            </button>
           )}
           {filtered.map((option) => (
             <button

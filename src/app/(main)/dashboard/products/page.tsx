@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -30,7 +31,7 @@ import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/
 import { getSizeGuides } from "@/lib/appwrite/size-guides";
 import type { HsnCode, Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
 
-const PRODUCT_TYPES = [
+const DEFAULT_PRODUCT_TYPES = [
   "Hoodie",
   "Sweatshirt",
   "T-Shirt",
@@ -41,7 +42,8 @@ const PRODUCT_TYPES = [
   "Shorts",
   "Cap",
   "Accessory",
-] as const;
+  "Cargo Pant",
+];
 
 const GENDERS = ["Men", "Women", "Unisex", "Kids"] as const;
 
@@ -265,6 +267,15 @@ export default function ProductsPage() {
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
   const [generatingSeo, setGeneratingSeo] = useState(false);
 
+  // Build dynamic product type options from defaults + types already used by existing products
+  const productTypeOptions = React.useMemo(() => {
+    const types = new Set(DEFAULT_PRODUCT_TYPES);
+    for (const p of products) {
+      if (p.productType) types.add(p.productType);
+    }
+    return Array.from(types).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
   const fetchProducts = useCallback(async () => {
     try {
       const res = await getProducts();
@@ -322,7 +333,7 @@ export default function ProductsPage() {
       featured: product.featured || false,
       slug: product.slug || "",
       productType: product.productType || "",
-      fabricCare: product.fabricCare2 || "",
+      fabricCare: product.fabricCare2 || product.fabricCare || "",
       returnPolicy: product.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
@@ -623,9 +634,10 @@ export default function ProductsPage() {
                       slug: generateSlug(prev.gender, value, prev.name),
                     }))
                   }
-                  options={PRODUCT_TYPES.map((t) => ({ value: t, label: t }))}
+                  options={productTypeOptions.map((t) => ({ value: t, label: t }))}
                   placeholder="Select type"
-                  searchPlaceholder="Search types..."
+                  searchPlaceholder="Search or add type..."
+                  creatable
                 />
               </div>
               <div className="space-y-2">
