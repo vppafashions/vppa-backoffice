@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -265,7 +265,6 @@ export default function ProductsPage() {
   const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
   const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
-  const [generatingSeo, setGeneratingSeo] = useState(false);
 
   // Build dynamic product type options from defaults + types already used by existing products
   const productTypeOptions = React.useMemo(() => {
@@ -421,6 +420,43 @@ export default function ProductsPage() {
       }
       const skuToUse = editingProduct?.sku ? editingProduct.sku : `${skuPrefix}${String(maxNum + 1).padStart(4, "0")}`;
 
+      // Auto-generate SEO if fields are empty
+      let seoMetaTitle = form.metaTitle;
+      let seoMetaDescription = form.metaDescription;
+      let seoKeywords = form.seoKeywords;
+      let seoOgTitle = form.ogTitle;
+      let seoOgDescription = form.ogDescription;
+
+      const seoEmpty = !seoMetaTitle && !seoMetaDescription && !seoKeywords && !seoOgTitle && !seoOgDescription;
+      if (seoEmpty && form.name) {
+        try {
+          const seoRes = await fetch("/api/generate-seo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: form.name,
+              productType: form.productType,
+              gender: form.gender,
+              category: form.category,
+              description: form.description,
+              price: form.price,
+              colors: form.colors,
+              sizes: form.sizes,
+            }),
+          });
+          if (seoRes.ok) {
+            const seo = await seoRes.json();
+            seoMetaTitle = seo.metaTitle || "";
+            seoMetaDescription = seo.metaDescription || "";
+            seoKeywords = seo.seoKeywords || "";
+            seoOgTitle = seo.ogTitle || "";
+            seoOgDescription = seo.ogDescription || "";
+          }
+        } catch {
+          // SEO generation failed silently — save product without SEO
+        }
+      }
+
       const data = {
         name: form.name,
         itemCode: form.itemCode.trim(),
@@ -450,11 +486,11 @@ export default function ProductsPage() {
         stickerLabel1: form.stickerLabel1,
         stickerLabel2: form.stickerLabel2,
         seoData: JSON.stringify({
-          metaTitle: form.metaTitle,
-          metaDescription: form.metaDescription,
-          seoKeywords: form.seoKeywords,
-          ogTitle: form.ogTitle,
-          ogDescription: form.ogDescription,
+          metaTitle: seoMetaTitle,
+          metaDescription: seoMetaDescription,
+          seoKeywords,
+          ogTitle: seoOgTitle,
+          ogDescription: seoOgDescription,
         }),
       };
 
@@ -1061,65 +1097,11 @@ export default function ProductsPage() {
 
             {/* SEO Section */}
             <div className="space-y-3 rounded-md border border-dashed p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-semibold">SEO & Social</Label>
-                  <p className="text-muted-foreground text-xs">
-                    AI-powered meta tags for search engines and social media
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={generatingSeo || !form.name}
-                  onClick={async () => {
-                    setGeneratingSeo(true);
-                    try {
-                      const res = await fetch("/api/generate-seo", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          name: form.name,
-                          productType: form.productType,
-                          gender: form.gender,
-                          category: form.category,
-                          description: form.description,
-                          price: form.price,
-                          colors: form.colors,
-                          sizes: form.sizes,
-                        }),
-                      });
-                      if (!res.ok) throw new Error("Generation failed");
-                      const seo = await res.json();
-                      setForm((prev) => ({
-                        ...prev,
-                        metaTitle: seo.metaTitle || prev.metaTitle,
-                        metaDescription: seo.metaDescription || prev.metaDescription,
-                        seoKeywords: seo.seoKeywords || prev.seoKeywords,
-                        ogTitle: seo.ogTitle || prev.ogTitle,
-                        ogDescription: seo.ogDescription || prev.ogDescription,
-                      }));
-                      toast.success("SEO content generated!");
-                    } catch {
-                      toast.error("Failed to generate SEO content");
-                    } finally {
-                      setGeneratingSeo(false);
-                    }
-                  }}
-                >
-                  {generatingSeo ? (
-                    <>
-                      <Loader2 className="mr-1 size-3 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-1 size-3" />
-                      Generate SEO
-                    </>
-                  )}
-                </Button>
+              <div>
+                <Label className="text-base font-semibold">SEO & Social</Label>
+                <p className="text-muted-foreground text-xs">
+                  Auto-generated by AI on save when fields are empty. You can also fill in manually.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="metaTitle">Meta Title</Label>
