@@ -3,24 +3,18 @@
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox";
+import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +46,18 @@ const DEFAULT_PRODUCT_TYPES = [
 ];
 
 const GENDERS = ["Men", "Women", "Unisex", "Kids"] as const;
+
+function generateSlug(gender: string, productType: string, name: string): string {
+  const g = gender?.toLowerCase() || "unisex";
+  const t = productType?.toLowerCase().replace(/\s+/g, "-") || "";
+  const n =
+    name
+      ?.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-") || "";
+  const parts = [g, t, n].filter(Boolean);
+  return `/${parts.join("/")}`;
+}
 
 const GENDER_CODE: Record<string, string> = { Men: "1", Women: "2", Unisex: "3", Kids: "4" };
 
@@ -145,6 +151,11 @@ interface ProductForm {
   gender: string;
   stickerLabel1: string;
   stickerLabel2: string;
+  metaTitle: string;
+  metaDescription: string;
+  seoKeywords: string;
+  ogTitle: string;
+  ogDescription: string;
 }
 
 function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
@@ -191,6 +202,23 @@ function totalVariantStock(variants: VariantInventoryItem[]): number {
   return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
 }
 
+function parseSeoData(raw: string | undefined | null): {
+  metaTitle: string;
+  metaDescription: string;
+  seoKeywords: string;
+  ogTitle: string;
+  ogDescription: string;
+} {
+  const defaults = { metaTitle: "", metaDescription: "", seoKeywords: "", ogTitle: "", ogDescription: "" };
+  if (!raw) return defaults;
+  try {
+    const parsed = JSON.parse(raw);
+    return { ...defaults, ...parsed };
+  } catch {
+    return defaults;
+  }
+}
+
 const emptyForm: ProductForm = {
   name: "",
   itemCode: "",
@@ -214,6 +242,11 @@ const emptyForm: ProductForm = {
   gender: "Unisex",
   stickerLabel1: "",
   stickerLabel2: "",
+  metaTitle: "",
+  metaDescription: "",
+  seoKeywords: "",
+  ogTitle: "",
+  ogDescription: "",
 };
 
 export default function ProductsPage() {
@@ -232,6 +265,7 @@ export default function ProductsPage() {
   const [colorImageUploading, setColorImageUploading] = useState<string | null>(null);
   const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
+  const [generatingSeo, setGeneratingSeo] = useState(false);
 
   // Build dynamic product type options from defaults + types already used by existing products
   const productTypeOptions = React.useMemo(() => {
@@ -305,6 +339,7 @@ export default function ProductsPage() {
       gender: product.gender || "Unisex",
       stickerLabel1: product.stickerLabel1 || "",
       stickerLabel2: product.stickerLabel2 || "",
+      ...parseSeoData(product.seoData),
     });
     try {
       setImages(product.images ? JSON.parse(product.images) : []);
@@ -403,7 +438,7 @@ export default function ProductsPage() {
         displayOnCollectionPage: form.displayOnCollectionPage,
         featured: form.featured,
         inStock: stockQuantity > 0,
-        slug: form.slug || form.name.toLowerCase().replace(/\s+/g, "-"),
+        slug: form.slug || generateSlug(form.gender, form.productType, form.name),
         productType: form.productType,
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
@@ -414,6 +449,13 @@ export default function ProductsPage() {
         gender: form.gender || "Unisex",
         stickerLabel1: form.stickerLabel1,
         stickerLabel2: form.stickerLabel2,
+        seoData: JSON.stringify({
+          metaTitle: form.metaTitle,
+          metaDescription: form.metaDescription,
+          seoKeywords: form.seoKeywords,
+          ogTitle: form.ogTitle,
+          ogDescription: form.ogDescription,
+        }),
       };
 
       if (editingProduct) {
@@ -566,26 +608,37 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
-                <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setForm((prev) => ({
+                      ...prev,
+                      name: newName,
+                      slug: generateSlug(prev.gender, prev.productType, newName),
+                    }));
+                  }}
+                />
+                <CharCount current={form.name.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="productType">Product Type *</Label>
-                <Combobox
-                  value={form.productType}
-                  onValueChange={(value) => setForm({ ...form, productType: value as string })}
-                >
-                  <ComboboxInput placeholder="Search or add type..." />
-                  <ComboboxContent>
-                    <ComboboxList>
-                      <ComboboxEmpty>Type to add a new product type</ComboboxEmpty>
-                      {productTypeOptions.map((t) => (
-                        <ComboboxItem key={t} value={t}>
-                          {t}
-                        </ComboboxItem>
-                      ))}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                <SearchableSelect
+                  id="productType"
+                  value={form.productType || undefined}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      productType: value,
+                      slug: generateSlug(prev.gender, value, prev.name),
+                    }))
+                  }
+                  options={productTypeOptions.map((t) => ({ value: t, label: t }))}
+                  placeholder="Select type"
+                  searchPlaceholder="Search or add type..."
+                  creatable
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="itemCode">Product ID *</Label>
@@ -597,18 +650,20 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender *</Label>
-                <Select value={form.gender || "Unisex"} onValueChange={(value) => setForm({ ...form, gender: value })}>
-                  <SelectTrigger id="gender" className="w-full">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GENDERS.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="gender"
+                  value={form.gender || "Unisex"}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      gender: value,
+                      slug: generateSlug(value, prev.productType, prev.name),
+                    }))
+                  }
+                  options={GENDERS.map((g) => ({ value: g, label: g }))}
+                  placeholder="Select gender"
+                  searchPlaceholder="Search..."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
@@ -618,6 +673,7 @@ export default function ProductsPage() {
                   placeholder="auto-generated"
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                 />
+                <CharCount current={form.slug.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label>SKU</Label>
@@ -631,12 +687,12 @@ export default function ProductsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <Label>Description</Label>
+              <RichTextEditor
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
+                onChange={(val) => setForm({ ...form, description: val })}
+                placeholder="Enter product description..."
+                maxLength={1000}
               />
             </div>
 
@@ -649,6 +705,7 @@ export default function ProductsPage() {
                   placeholder="e.g. DRY WASH ONLY"
                   onChange={(e) => setForm({ ...form, stickerLabel1: e.target.value })}
                 />
+                <CharCount current={form.stickerLabel1.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stickerLabel2">Sticker Label 2</Label>
@@ -658,6 +715,7 @@ export default function ProductsPage() {
                   placeholder="e.g. 100% COTTON"
                   onChange={(e) => setForm({ ...form, stickerLabel2: e.target.value })}
                 />
+                <CharCount current={form.stickerLabel2.length} max={255} />
               </div>
             </div>
             <p className="text-muted-foreground text-xs -mt-2">
@@ -665,13 +723,12 @@ export default function ProductsPage() {
             </p>
 
             <div className="space-y-2">
-              <Label htmlFor="fabricCare">Fabric & Care</Label>
-              <Textarea
-                id="fabricCare"
+              <Label>Fabric & Care</Label>
+              <RichTextEditor
                 value={form.fabricCare}
+                onChange={(val) => setForm({ ...form, fabricCare: val })}
                 placeholder="e.g. 100% Cotton, Machine wash cold, Tumble dry low"
-                onChange={(e) => setForm({ ...form, fabricCare: e.target.value })}
-                rows={3}
+                maxLength={1000}
               />
             </div>
 
@@ -684,26 +741,24 @@ export default function ProductsPage() {
                 onChange={(e) => setForm({ ...form, returnPolicy: e.target.value })}
                 rows={3}
               />
+              <CharCount current={form.returnPolicy.length} max={500} />
             </div>
 
             <div className="space-y-2">
               <Label>Size Guide</Label>
-              <Select
+              <SearchableSelect
                 value={form.sizeGuideId || "none"}
                 onValueChange={(value) => setForm({ ...form, sizeGuideId: value === "none" ? "" : value })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a size guide" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No size guide</SelectItem>
-                  {sizeGuides.map((sg) => (
-                    <SelectItem key={sg.$id} value={sg.$id}>
-                      {sg.name} ({sg.gender} – {sg.clothingType})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: "none", label: "No size guide" },
+                  ...sizeGuides.map((sg) => ({
+                    value: sg.$id,
+                    label: `${sg.name} (${sg.gender} – ${sg.clothingType})`,
+                  })),
+                ]}
+                placeholder="Select a size guide"
+                searchPlaceholder="Search size guides..."
+              />
               <p className="text-muted-foreground text-xs">
                 Link a size guide to show on the product page. Manage guides in Catalog &rarr; Size Guides.
               </p>
@@ -733,22 +788,17 @@ export default function ProductsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="hsnCode">HSN Code *</Label>
-                <Select
+                <SearchableSelect
+                  id="hsnCode"
                   value={form.hsnCode || undefined}
                   onValueChange={(value) => setForm({ ...form, hsnCode: value })}
-                >
-                  <SelectTrigger id="hsnCode" className="w-full">
-                    <SelectValue placeholder="Select HSN code" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {hsnCodes.map((h) => (
-                      <SelectItem key={h.$id} value={h.code}>
-                        {h.code} - {h.description.slice(0, 40)}
-                        {h.description.length > 40 ? "..." : ""} ({h.cgstPercent + h.sgstPercent}% GST)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={hsnCodes.map((h) => ({
+                    value: h.code,
+                    label: `${h.code} - ${h.description.slice(0, 40)}${h.description.length > 40 ? "..." : ""} (${h.cgstPercent + h.sgstPercent}% GST)`,
+                  }))}
+                  placeholder="Select HSN code"
+                  searchPlaceholder="Search HSN codes..."
+                />
                 {form.hsnCode &&
                   (() => {
                     const matched = hsnCodes.find((h) => h.code === form.hsnCode);
@@ -780,24 +830,18 @@ export default function ProductsPage() {
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                 />
+                <CharCount current={form.category.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="collectionSlug">Collection Slug</Label>
-                <Select
+                <SearchableSelect
+                  id="collectionSlug"
                   value={form.collectionSlug || undefined}
                   onValueChange={(value) => setForm({ ...form, collectionSlug: value as CollectionSlug })}
-                >
-                  <SelectTrigger id="collectionSlug" className="w-full">
-                    <SelectValue placeholder="Select a collection" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COLLECTION_SLUG_VALUES.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {COLLECTION_SLUG_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={COLLECTION_SLUG_VALUES.map((v) => ({ value: v, label: COLLECTION_SLUG_LABELS[v] }))}
+                  placeholder="Select a collection"
+                  searchPlaceholder="Search collections..."
+                />
               </div>
             </div>
 
@@ -810,6 +854,7 @@ export default function ProductsPage() {
                   placeholder="S, M, L, XL"
                   onChange={(e) => setForm({ ...form, sizes: e.target.value })}
                 />
+                <CharCount current={form.sizes.length} max={1000} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="colors">Colors (comma-separated)</Label>
@@ -819,6 +864,7 @@ export default function ProductsPage() {
                   placeholder="Black, Navy, White"
                   onChange={(e) => setForm({ ...form, colors: e.target.value })}
                 />
+                <CharCount current={form.colors.length} max={1000} />
               </div>
             </div>
 
@@ -1012,6 +1058,123 @@ export default function ProductsPage() {
                   ))}
               </div>
             )}
+
+            {/* SEO Section */}
+            <div className="space-y-3 rounded-md border border-dashed p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-semibold">SEO & Social</Label>
+                  <p className="text-muted-foreground text-xs">
+                    AI-powered meta tags for search engines and social media
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={generatingSeo || !form.name}
+                  onClick={async () => {
+                    setGeneratingSeo(true);
+                    try {
+                      const res = await fetch("/api/generate-seo", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: form.name,
+                          productType: form.productType,
+                          gender: form.gender,
+                          category: form.category,
+                          description: form.description,
+                          price: form.price,
+                          colors: form.colors,
+                          sizes: form.sizes,
+                        }),
+                      });
+                      if (!res.ok) throw new Error("Generation failed");
+                      const seo = await res.json();
+                      setForm((prev) => ({
+                        ...prev,
+                        metaTitle: seo.metaTitle || prev.metaTitle,
+                        metaDescription: seo.metaDescription || prev.metaDescription,
+                        seoKeywords: seo.seoKeywords || prev.seoKeywords,
+                        ogTitle: seo.ogTitle || prev.ogTitle,
+                        ogDescription: seo.ogDescription || prev.ogDescription,
+                      }));
+                      toast.success("SEO content generated!");
+                    } catch {
+                      toast.error("Failed to generate SEO content");
+                    } finally {
+                      setGeneratingSeo(false);
+                    }
+                  }}
+                >
+                  {generatingSeo ? (
+                    <>
+                      <Loader2 className="mr-1 size-3 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-1 size-3" />
+                      Generate SEO
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metaTitle">Meta Title</Label>
+                <Input
+                  id="metaTitle"
+                  value={form.metaTitle}
+                  placeholder="SEO title for search results (50-60 chars)"
+                  onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
+                />
+                <CharCount current={form.metaTitle.length} max={60} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="metaDescription">Meta Description</Label>
+                <Textarea
+                  id="metaDescription"
+                  value={form.metaDescription}
+                  placeholder="Compelling description for search results (140-160 chars)"
+                  onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
+                  rows={2}
+                />
+                <CharCount current={form.metaDescription.length} max={160} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="seoKeywords">SEO Keywords</Label>
+                <Input
+                  id="seoKeywords"
+                  value={form.seoKeywords}
+                  placeholder="comma-separated keywords"
+                  onChange={(e) => setForm({ ...form, seoKeywords: e.target.value })}
+                />
+                <CharCount current={form.seoKeywords.length} max={500} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ogTitle">OG Title (Social)</Label>
+                  <Input
+                    id="ogTitle"
+                    value={form.ogTitle}
+                    placeholder="Title for social sharing"
+                    onChange={(e) => setForm({ ...form, ogTitle: e.target.value })}
+                  />
+                  <CharCount current={form.ogTitle.length} max={70} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ogDescription">OG Description (Social)</Label>
+                  <Input
+                    id="ogDescription"
+                    value={form.ogDescription}
+                    placeholder="Description for social sharing"
+                    onChange={(e) => setForm({ ...form, ogDescription: e.target.value })}
+                  />
+                  <CharCount current={form.ogDescription.length} max={120} />
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label>Images (Default Gallery)</Label>

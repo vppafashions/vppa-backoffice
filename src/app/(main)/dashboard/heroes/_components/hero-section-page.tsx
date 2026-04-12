@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -216,6 +217,7 @@ export function HeroSectionPage({ title, description, prefix, sectionLabels }: H
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
               <Input id="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <CharCount current={form.title.length} max={500} />
             </div>
 
             <div className="space-y-2">
@@ -225,6 +227,7 @@ export function HeroSectionPage({ title, description, prefix, sectionLabels }: H
                 value={form.subtitle}
                 onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
               />
+              <CharCount current={form.subtitle.length} max={1000} />
             </div>
 
             <div className="space-y-2">
@@ -234,6 +237,7 @@ export function HeroSectionPage({ title, description, prefix, sectionLabels }: H
                 value={form.tagline}
                 onChange={(e) => setForm({ ...form, tagline: e.target.value })}
               />
+              <CharCount current={form.tagline.length} max={500} />
             </div>
 
             <div className="space-y-2">
@@ -244,6 +248,7 @@ export function HeroSectionPage({ title, description, prefix, sectionLabels }: H
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3}
               />
+              <CharCount current={form.description.length} max={5000} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -254,6 +259,7 @@ export function HeroSectionPage({ title, description, prefix, sectionLabels }: H
                   value={form.ctaText}
                   onChange={(e) => setForm({ ...form, ctaText: e.target.value })}
                 />
+                <CharCount current={form.ctaText.length} max={255} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ctaLink">CTA Link</Label>
@@ -262,6 +268,7 @@ export function HeroSectionPage({ title, description, prefix, sectionLabels }: H
                   value={form.ctaLink}
                   onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
                 />
+                <CharCount current={form.ctaLink.length} max={500} />
               </div>
             </div>
 

@@ -7,9 +7,10 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { getHsnCodes } from "@/lib/appwrite/hsn-codes";
@@ -284,6 +285,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Invoice No *</Label>
               <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+              <CharCount current={invoiceNumber.length} max={50} />
             </div>
             <div className="space-y-2">
               <Label>Invoice Date *</Label>
@@ -296,6 +298,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                 placeholder={`#VPPA${invoiceNumber}IN`}
                 onChange={(e) => setOrderNumber(e.target.value)}
               />
+              <CharCount current={orderNumber.length} max={50} />
             </div>
             <div className="space-y-2">
               <Label>Order Date</Label>
@@ -304,39 +307,40 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Mode of Transport</Label>
               <Input value={modeOfTransport} onChange={(e) => setModeOfTransport(e.target.value)} placeholder="-" />
+              <CharCount current={modeOfTransport.length} max={100} />
             </div>
             <div className="space-y-2">
               <Label>State Code</Label>
-              <Select value={stateCode} onValueChange={handleStateChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(INDIAN_STATES).map(([code, name]) => (
-                    <SelectItem key={code} value={code}>
-                      {code} - {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={stateCode}
+                onValueChange={handleStateChange}
+                options={Object.entries(INDIAN_STATES).map(([code, name]) => ({
+                  value: code,
+                  label: `${code} - ${name}`,
+                }))}
+                placeholder="Select state"
+                searchPlaceholder="Search states..."
+              />
             </div>
             <div className="space-y-2">
               <Label>Place of Supply</Label>
               <Input value={placeOfSupply} onChange={(e) => setPlaceOfSupply(e.target.value)} />
+              <CharCount current={placeOfSupply.length} max={255} />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as Invoice["status"])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={status}
+                onValueChange={(v) => setStatus(v as Invoice["status"])}
+                options={[
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent" },
+                  { value: "paid", label: "Paid" },
+                  { value: "cancelled", label: "Cancelled" },
+                ]}
+                placeholder="Select status"
+                searchPlaceholder="Search..."
+              />
             </div>
           </div>
         </CardContent>
@@ -352,26 +356,32 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
             <div className="space-y-2">
               <Label>Customer Name *</Label>
               <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <CharCount current={customerName.length} max={255} />
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
+              <CharCount current={customerEmail.length} max={255} />
             </div>
             <div className="col-span-2 space-y-2">
               <Label>Address</Label>
               <Textarea value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} rows={2} />
+              <CharCount current={customerAddress.length} max={500} />
             </div>
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+              <CharCount current={customerPhone.length} max={50} />
             </div>
             <div className="space-y-2">
               <Label>PIN Code</Label>
               <Input value={customerPin} onChange={(e) => setCustomerPin(e.target.value)} />
+              <CharCount current={customerPin.length} max={20} />
             </div>
             <div className="space-y-2">
               <Label>State</Label>
               <Input value={customerState} onChange={(e) => setCustomerState(e.target.value)} />
+              <CharCount current={customerState.length} max={100} />
             </div>
           </div>
         </CardContent>
@@ -454,7 +464,8 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                       />
                     </TableCell>
                     <TableCell>
-                      <Select
+                      <SearchableSelect
+                        className="w-[160px]"
                         value={row.hsnCodeId || "custom"}
                         onValueChange={(value) => {
                           if (value === "custom") {
@@ -490,19 +501,16 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                             }
                           }
                         }}
-                      >
-                        <SelectTrigger className="w-[160px]">
-                          <SelectValue placeholder="Select HSN" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="custom">Custom</SelectItem>
-                          {hsnCodes.map((h) => (
-                            <SelectItem key={h.$id} value={h.$id}>
-                              {h.code} ({h.cgstPercent + h.sgstPercent}%)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        options={[
+                          { value: "custom", label: "Custom" },
+                          ...hsnCodes.map((h) => ({
+                            value: h.$id,
+                            label: `${h.code} (${h.cgstPercent + h.sgstPercent}%)`,
+                          })),
+                        ]}
+                        placeholder="Select HSN"
+                        searchPlaceholder="Search HSN..."
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {row.cgstPercent + row.sgstPercent}%

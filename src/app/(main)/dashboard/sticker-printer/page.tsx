@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getProducts } from "@/lib/appwrite/products";
 import type { Product, VariantInventoryItem } from "@/lib/appwrite/types";
@@ -625,15 +625,16 @@ export default function StickerPrinterPage() {
               {/* Sticker size selector */}
               <div className="space-y-2">
                 <Label>Sticker Size</Label>
-                <Select value={stickerSize} onValueChange={(v) => setStickerSize(v as StickerSize)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="50x100">50mm × 100mm (Tall)</SelectItem>
-                    <SelectItem value="50x50">50mm × 50mm (Square)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={stickerSize}
+                  onValueChange={(v) => setStickerSize(v as StickerSize)}
+                  options={[
+                    { value: "50x100", label: "50mm × 100mm (Tall)" },
+                    { value: "50x50", label: "50mm × 50mm (Square)" },
+                  ]}
+                  placeholder="Select size"
+                  searchPlaceholder="Search..."
+                />
               </div>
 
               {/* Search by item code */}
@@ -687,43 +688,33 @@ export default function StickerPrinterPage() {
               {/* Or select from dropdown */}
               <div className="space-y-2">
                 <Label>Or Select Product</Label>
-                <Select
+                <SearchableSelect
                   value={selectedProduct?.$id || ""}
                   onValueChange={(id) => {
                     const p = products.find((prod) => prod.$id === id);
                     setSelectedProduct(p || null);
                     setSelectedVariantIdx("");
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a product..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((p) => (
-                      <SelectItem key={p.$id} value={p.$id}>
-                        {p.name} ({p.itemCode})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={products.map((p) => ({ value: p.$id, label: `${p.name} (${p.itemCode})` }))}
+                  placeholder="Choose a product..."
+                  searchPlaceholder="Search products..."
+                />
               </div>
 
               {/* Variant selector */}
               {selectedProduct && selectedVariants.length > 0 && (
                 <div className="space-y-2">
                   <Label>Select Variant</Label>
-                  <Select value={selectedVariantIdx} onValueChange={setSelectedVariantIdx}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose variant..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedVariants.map((v, i) => (
-                        <SelectItem key={`variant-${i}`} value={String(i)}>
-                          {v.color} / {v.size} - {v.itemCode} (Stock: {v.stock})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={selectedVariantIdx}
+                    onValueChange={setSelectedVariantIdx}
+                    options={selectedVariants.map((v, i) => ({
+                      value: String(i),
+                      label: `${v.color} / ${v.size} - ${v.itemCode} (Stock: ${v.stock})`,
+                    }))}
+                    placeholder="Choose variant..."
+                    searchPlaceholder="Search variants..."
+                  />
                 </div>
               )}
 

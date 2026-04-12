@@ -32,6 +32,7 @@ export interface Product extends Models.Document {
   stickerLabels: string;
   stickerLabel1: string;
   stickerLabel2: string;
+  seoData: string;
 }
 
 export interface VariantInventoryItem {

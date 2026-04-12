@@ -8,10 +8,11 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CharCount } from "@/components/ui/char-count";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -400,6 +401,7 @@ export default function CouponsPage() {
                 }
                 className="font-mono uppercase"
               />
+              <CharCount current={form.code.length} max={50} />
             </div>
 
             {/* Description */}
@@ -412,13 +414,14 @@ export default function CouponsPage() {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={2}
               />
+              <CharCount current={form.description.length} max={500} />
             </div>
 
             {/* Discount Type + Value */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Discount Type *</Label>
-                <Select
+                <SearchableSelect
                   value={form.discountType}
                   onValueChange={(value) =>
                     setForm({
@@ -426,15 +429,13 @@ export default function CouponsPage() {
                       discountType: value as "percentage" | "flat",
                     })
                   }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percentage">Percentage (%)</SelectItem>
-                    <SelectItem value="flat">Flat Amount (INR)</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: "percentage", label: "Percentage (%)" },
+                    { value: "flat", label: "Flat Amount (INR)" },
+                  ]}
+                  placeholder="Select type"
+                  searchPlaceholder="Search..."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="discountValue">
