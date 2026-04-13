@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ImageIcon, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { uploadImage } from "@/lib/appwrite/cloudinary";
 import { createSizeGuide, deleteSizeGuide, getSizeGuides, updateSizeGuide } from "@/lib/appwrite/size-guides";
 import type { SizeGuide } from "@/lib/appwrite/types";
 
@@ -247,6 +248,7 @@ interface SizeGuideForm {
   gender: string;
   clothingType: string;
   unit: string;
+  measureImage: string;
 }
 
 export default function SizeGuidesPage() {
@@ -262,7 +264,9 @@ export default function SizeGuidesPage() {
     gender: "",
     clothingType: "",
     unit: "both",
+    measureImage: "",
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [columns, setColumns] = useState<string[]>(["Size"]);
   const [rows, setRows] = useState<string[][]>([[""]]);
   const [newColumnName, setNewColumnName] = useState("");
@@ -285,7 +289,7 @@ export default function SizeGuidesPage() {
 
   const handleNew = () => {
     setEditingGuide(null);
-    setForm({ name: "", gender: "", clothingType: "", unit: "both" });
+    setForm({ name: "", gender: "", clothingType: "", unit: "both", measureImage: "" });
     setColumns(["Size"]);
     setRows([[""]]);
     setNewColumnName("");
@@ -299,6 +303,7 @@ export default function SizeGuidesPage() {
       gender: guide.gender,
       clothingType: guide.clothingType,
       unit: guide.unit || "both",
+      measureImage: guide.measureImage || "",
     });
     const cols = parseJsonSafe<string[]>(guide.columns, ["Size"]);
     const rws = parseJsonSafe<string[][]>(guide.rows, [[""]]);
@@ -377,6 +382,7 @@ export default function SizeGuidesPage() {
         unit: form.unit,
         columns: JSON.stringify(columns),
         rows: JSON.stringify(rows),
+        measureImage: form.measureImage,
       };
 
       if (editingGuide) {
@@ -754,13 +760,63 @@ export default function SizeGuidesPage() {
                 </table>
               </div>
             </div>
+            {/* How to Measure Image */}
+            <div className="space-y-2">
+              <Label>How to Measure Image (optional)</Label>
+              <p className="text-muted-foreground text-xs">
+                Upload a diagram showing how to measure. This will appear in a &quot;How to Measure&quot; tab on the
+                frontend.
+              </p>
+              {form.measureImage ? (
+                <div className="relative inline-block">
+                  <img
+                    src={form.measureImage}
+                    alt="How to measure"
+                    className="max-h-48 rounded border object-contain"
+                  />
+                  <button
+                    type="button"
+                    className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                    onClick={() => setForm({ ...form, measureImage: "" })}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer items-center gap-2 rounded border border-dashed px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                  <ImageIcon className="size-5" />
+                  {uploadingImage ? "Uploading..." : "Click to upload image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingImage(true);
+                      try {
+                        const url = await uploadImage(file);
+                        setForm((prev) => ({ ...prev, measureImage: url }));
+                        toast.success("Image uploaded");
+                      } catch (err) {
+                        console.error("Upload failed:", err);
+                        toast.error("Failed to upload image");
+                      } finally {
+                        setUploadingImage(false);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || uploadingImage}>
               {saving ? "Saving..." : editingGuide ? "Update" : "Create"}
             </Button>
           </DialogFooter>
