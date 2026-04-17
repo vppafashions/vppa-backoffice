@@ -664,7 +664,9 @@ export default function ProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12" />
                       <TableHead>Name</TableHead>
+                      <TableHead>Actions</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Product ID</TableHead>
@@ -676,63 +678,90 @@ export default function ProductsPage() {
                       <TableHead>Collection Page</TableHead>
                       <TableHead>Stock</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedProducts.map((product) => (
-                      <TableRow key={product.$id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell className="font-mono text-xs uppercase">{product.sku || "—"}</TableCell>
-                        <TableCell>{product.productType || "—"}</TableCell>
-                        <TableCell className="font-mono text-xs">{product.itemCode}</TableCell>
-                        <TableCell>{product.gender || "Unisex"}</TableCell>
-                        <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
-                        <TableCell>{formatCurrency(product.price)}</TableCell>
-                        <TableCell>
-                          {product.collectionSlug ? (
-                            <Badge variant="outline">{getCollectionSlugLabel(product.collectionSlug)}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={product.displayOnMainPage ? "default" : "secondary"}>
-                            {product.displayOnMainPage ? "Yes" : "No"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={product.displayOnCollectionPage ? "default" : "secondary"}>
-                            {product.displayOnCollectionPage ? "Yes" : "No"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{product.stockQuantity ?? 0}</TableCell>
-                        <TableCell>
-                          {(product.stockQuantity ?? 0) > 0 ? (
-                            <Badge variant="default">In Stock</Badge>
-                          ) : (
-                            <Badge variant="secondary">Out of Stock</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="icon" variant="ghost" onClick={() => handleEdit(product)}>
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setDeletingProduct(product);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {paginatedProducts.map((product) => {
+                      let firstImage = "";
+                      try {
+                        const imgs = product.images ? JSON.parse(product.images) : [];
+                        if (imgs.length > 0) firstImage = imgs[0];
+                      } catch {
+                        /* ignore */
+                      }
+                      return (
+                        <TableRow key={product.$id}>
+                          <TableCell className="w-12 p-2">
+                            {firstImage ? (
+                              <img
+                                src={firstImage}
+                                alt={product.name}
+                                className="size-10 rounded-md border object-cover"
+                              />
+                            ) : (
+                              <div className="flex size-10 items-center justify-center rounded-md border bg-muted">
+                                <ImageIcon className="size-4 text-muted-foreground" />
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8"
+                                onClick={() => handleEdit(product)}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8"
+                                onClick={() => {
+                                  setDeletingProduct(product);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs uppercase">{product.sku || "—"}</TableCell>
+                          <TableCell>{product.productType || "—"}</TableCell>
+                          <TableCell className="font-mono text-xs">{product.itemCode}</TableCell>
+                          <TableCell>{product.gender || "Unisex"}</TableCell>
+                          <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
+                          <TableCell>{formatCurrency(product.price)}</TableCell>
+                          <TableCell>
+                            {product.collectionSlug ? (
+                              <Badge variant="outline">{getCollectionSlugLabel(product.collectionSlug)}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={product.displayOnMainPage ? "default" : "secondary"}>
+                              {product.displayOnMainPage ? "Yes" : "No"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={product.displayOnCollectionPage ? "default" : "secondary"}>
+                              {product.displayOnCollectionPage ? "Yes" : "No"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{product.stockQuantity ?? 0}</TableCell>
+                          <TableCell>
+                            {(product.stockQuantity ?? 0) > 0 ? (
+                              <Badge variant="default">In Stock</Badge>
+                            ) : (
+                              <Badge variant="secondary">Out of Stock</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
