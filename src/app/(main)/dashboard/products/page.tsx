@@ -689,6 +689,15 @@ export default function ProductsPage() {
                       } catch {
                         /* ignore */
                       }
+                      if (!firstImage) {
+                        try {
+                          const ci = product.colorImages ? JSON.parse(product.colorImages) : {};
+                          const firstColor = Object.keys(ci)[0];
+                          if (firstColor && ci[firstColor]?.length > 0) firstImage = ci[firstColor][0];
+                        } catch {
+                          /* ignore */
+                        }
+                      }
                       return (
                         <TableRow key={product.$id}>
                           <TableCell className="w-12 p-2">
