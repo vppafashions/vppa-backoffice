@@ -664,7 +664,7 @@ export default function ProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12" />
+                      <TableHead className="w-14 min-w-14" />
                       <TableHead>Name</TableHead>
                       <TableHead>Actions</TableHead>
                       <TableHead>SKU</TableHead>
@@ -700,15 +700,17 @@ export default function ProductsPage() {
                       }
                       return (
                         <TableRow key={product.$id}>
-                          <TableCell className="w-12 p-2">
+                          <TableCell className="w-14 min-w-14 p-2">
                             {firstImage ? (
                               <img
                                 src={firstImage}
                                 alt={product.name}
-                                className="size-10 rounded-md border object-cover"
+                                width={40}
+                                height={40}
+                                className="h-10 w-10 min-w-10 rounded-md border object-cover"
                               />
                             ) : (
-                              <div className="flex size-10 items-center justify-center rounded-md border bg-muted">
+                              <div className="flex h-10 w-10 min-w-10 items-center justify-center rounded-md border bg-muted">
                                 <ImageIcon className="size-4 text-muted-foreground" />
                               </div>
                             )}
