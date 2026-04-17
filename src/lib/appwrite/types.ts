@@ -126,6 +126,7 @@ export interface SizeGuide extends Models.Document {
   columns: string;
   rows: string;
   unit: string;
+  measureImage: string;
 }
 
 export interface Customer extends Models.Document {
