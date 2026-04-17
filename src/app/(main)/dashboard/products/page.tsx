@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -266,6 +267,11 @@ export default function ProductsPage() {
   const [sizeGuides, setSizeGuides] = useState<SizeGuide[]>([]);
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
   const [generatingSeo, setGeneratingSeo] = useState(false);
+  const [filterGender, setFilterGender] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterCollection, setFilterCollection] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Build dynamic product type options from defaults + types already used by existing products
   const productTypeOptions = React.useMemo(() => {
@@ -496,6 +502,41 @@ export default function ProductsPage() {
       maximumFractionDigits: 0,
     }).format(amount);
 
+  // --- Filtering ---
+  const filteredProducts = React.useMemo(() => {
+    let result = products;
+    if (filterGender !== "all") {
+      result = result.filter((p) => (p.gender || "Unisex") === filterGender);
+    }
+    if (filterType !== "all") {
+      result = result.filter((p) => p.productType === filterType);
+    }
+    if (filterCollection !== "all") {
+      result = result.filter((p) => {
+        if (!p.collectionSlug) return false;
+        // Match base collection name (e.g. "velocity" matches "velocity_men" and "velocity_women")
+        return p.collectionSlug.startsWith(filterCollection);
+      });
+    }
+    return result;
+  }, [products, filterGender, filterType, filterCollection]);
+
+  // --- Pagination ---
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProducts = filteredProducts.slice(
+    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+    safeCurrentPage * ITEMS_PER_PAGE,
+  );
+
+  // Reset page when filters change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally reset page when any filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filterGender, filterType, filterCollection]);
+
+  const collectionBaseNames = ["velocity", "presence", "power", "attitude"];
+
   return (
     <div className="@container/main flex flex-col gap-4 md:gap-6">
       <div className="flex items-center justify-between">
@@ -511,90 +552,195 @@ export default function ProductsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Products ({products.length})</CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>
+              All Products ({filteredProducts.length}
+              {filteredProducts.length !== products.length ? ` of ${products.length}` : ""})
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={filterGender} onValueChange={setFilterGender}>
+                <SelectTrigger className="h-8 w-[120px] text-xs">
+                  <SelectValue placeholder="Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genders</SelectItem>
+                  <SelectItem value="Men">Men</SelectItem>
+                  <SelectItem value="Women">Women</SelectItem>
+                  <SelectItem value="Unisex">Unisex</SelectItem>
+                  <SelectItem value="Kids">Kids</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="h-8 w-[140px] text-xs">
+                  <SelectValue placeholder="Product Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {productTypeOptions.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterCollection} onValueChange={setFilterCollection}>
+                <SelectTrigger className="h-8 w-[140px] text-xs">
+                  <SelectValue placeholder="Collection" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Collections</SelectItem>
+                  {collectionBaseNames.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(filterGender !== "all" || filterType !== "all" || filterCollection !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    setFilterGender("all");
+                    setFilterType("all");
+                    setFilterCollection("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="py-8 text-center text-muted-foreground">Loading products...</div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              No products yet. Click "Add Product" to create one.
+              {products.length === 0
+                ? 'No products yet. Click "Add Product" to create one.'
+                : "No products match the selected filters."}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Product ID</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>HSN</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Collection</TableHead>
-                  <TableHead>Home</TableHead>
-                  <TableHead>Collection Page</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.$id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell className="font-mono text-xs uppercase">{product.sku || "—"}</TableCell>
-                    <TableCell>{product.productType || "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{product.itemCode}</TableCell>
-                    <TableCell>{product.gender || "Unisex"}</TableCell>
-                    <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
-                    <TableCell>{formatCurrency(product.price)}</TableCell>
-                    <TableCell>
-                      {product.collectionSlug ? (
-                        <Badge variant="outline">{getCollectionSlugLabel(product.collectionSlug)}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.displayOnMainPage ? "default" : "secondary"}>
-                        {product.displayOnMainPage ? "Yes" : "No"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.displayOnCollectionPage ? "default" : "secondary"}>
-                        {product.displayOnCollectionPage ? "Yes" : "No"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{product.stockQuantity ?? 0}</TableCell>
-                    <TableCell>
-                      {(product.stockQuantity ?? 0) > 0 ? (
-                        <Badge variant="default">In Stock</Badge>
-                      ) : (
-                        <Badge variant="secondary">Out of Stock</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(product)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            setDeletingProduct(product);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Product ID</TableHead>
+                      <TableHead>Gender</TableHead>
+                      <TableHead>HSN</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Collection</TableHead>
+                      <TableHead>Home</TableHead>
+                      <TableHead>Collection Page</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedProducts.map((product) => (
+                      <TableRow key={product.$id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell className="font-mono text-xs uppercase">{product.sku || "—"}</TableCell>
+                        <TableCell>{product.productType || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">{product.itemCode}</TableCell>
+                        <TableCell>{product.gender || "Unisex"}</TableCell>
+                        <TableCell className="font-mono text-xs">{product.hsnCode}</TableCell>
+                        <TableCell>{formatCurrency(product.price)}</TableCell>
+                        <TableCell>
+                          {product.collectionSlug ? (
+                            <Badge variant="outline">{getCollectionSlugLabel(product.collectionSlug)}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={product.displayOnMainPage ? "default" : "secondary"}>
+                            {product.displayOnMainPage ? "Yes" : "No"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={product.displayOnCollectionPage ? "default" : "secondary"}>
+                            {product.displayOnCollectionPage ? "Yes" : "No"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{product.stockQuantity ?? 0}</TableCell>
+                        <TableCell>
+                          {(product.stockQuantity ?? 0) > 0 ? (
+                            <Badge variant="default">In Stock</Badge>
+                          ) : (
+                            <Badge variant="secondary">Out of Stock</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => handleEdit(product)}>
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                setDeletingProduct(product);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  <p className="text-muted-foreground text-sm">
+                    Showing {(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}–
+                    {Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8"
+                      disabled={safeCurrentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        variant={page === safeCurrentPage ? "default" : "outline"}
+                        size="icon"
+                        className="size-8 text-xs"
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8"
+                      disabled={safeCurrentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
