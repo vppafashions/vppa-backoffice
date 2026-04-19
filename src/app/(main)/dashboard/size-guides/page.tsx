@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { ImageIcon, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Copy, ImageIcon, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -402,6 +402,26 @@ export default function SizeGuidesPage() {
     }
   };
 
+  const handleDuplicate = async (guide: SizeGuide) => {
+    try {
+      const data = {
+        name: `${guide.name} (Copy)`,
+        gender: guide.gender,
+        clothingType: guide.clothingType,
+        unit: guide.unit || "both",
+        columns: guide.columns,
+        rows: guide.rows,
+        measureImage: guide.measureImage || "",
+      };
+      await createSizeGuide(data);
+      toast.success("Size guide duplicated");
+      fetchGuides();
+    } catch (error) {
+      console.error("Duplicate failed:", error);
+      toast.error("Failed to duplicate size guide");
+    }
+  };
+
   const handleDelete = async () => {
     if (!deletingGuide) return;
     try {
@@ -469,6 +489,9 @@ export default function SizeGuidesPage() {
                             <Button size="icon" variant="ghost" onClick={() => handleEdit(guide)}>
                               <Pencil className="size-4" />
                             </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDuplicate(guide)}>
+                              <Copy className="size-4" />
+                            </Button>
                             <Button
                               size="icon"
                               variant="ghost"
@@ -530,6 +553,9 @@ export default function SizeGuidesPage() {
                             <Button size="icon" variant="ghost" onClick={() => handleEdit(guide)}>
                               <Pencil className="size-4" />
                             </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDuplicate(guide)}>
+                              <Copy className="size-4" />
+                            </Button>
                             <Button
                               size="icon"
                               variant="ghost"
@@ -586,6 +612,9 @@ export default function SizeGuidesPage() {
                           <div className="flex justify-end gap-2">
                             <Button size="icon" variant="ghost" onClick={() => handleEdit(guide)}>
                               <Pencil className="size-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDuplicate(guide)}>
+                              <Copy className="size-4" />
                             </Button>
                             <Button
                               size="icon"
