@@ -442,6 +442,11 @@ export default function ProductsPage() {
       return;
     }
 
+    if (!isCollectionSlug(form.collectionSlug)) {
+      toast.error("Please select a valid collection");
+      return;
+    }
+
     const hasVariants = variantInventory.length > 0;
     const stockQuantity = hasVariants ? totalVariantStock(variantInventory) : Number.parseInt(form.stockQuantity, 10);
     if (Number.isNaN(stockQuantity) || stockQuantity < 0) {
@@ -558,7 +563,8 @@ export default function ProductsPage() {
       fetchProducts();
     } catch (error) {
       console.error("Save failed:", error);
-      toast.error("Failed to save product");
+      const msg = error instanceof Error ? error.message : "Failed to save product";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
