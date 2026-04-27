@@ -537,12 +537,9 @@ export default function ProductsPage() {
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
         fabricCare2: form.fabricCare,
-        returnPolicy: form.returnPolicy,
-        colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         sizeGuideId: form.sizeGuideId,
         gender: form.gender || "Unisex",
         stickerLabel1: form.stickerLabel1,
-        stickerLabel2: form.stickerLabel2,
         seoData: JSON.stringify({
           metaTitle: seoMetaTitle,
           metaDescription: seoMetaDescription,
