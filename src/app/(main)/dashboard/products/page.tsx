@@ -347,7 +347,7 @@ export default function ProductsPage() {
       featured: product.featured || false,
       slug: "",
       productType: product.productType || "",
-      fabricCare: product.fabricCare2 || product.fabricCare || "",
+      fabricCare: extras.fabricCare || product.fabricCare2 || product.fabricCare || "",
       returnPolicy: extras.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
@@ -395,7 +395,7 @@ export default function ProductsPage() {
       featured: product.featured || false,
       slug: product.slug || "",
       productType: product.productType || "",
-      fabricCare: product.fabricCare2 || product.fabricCare || "",
+      fabricCare: extras.fabricCare || product.fabricCare2 || product.fabricCare || "",
       returnPolicy: extras.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
@@ -547,7 +547,6 @@ export default function ProductsPage() {
         productType: form.productType,
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
-        fabricCare2: form.fabricCare,
         sizeGuideId: form.sizeGuideId,
         gender: form.gender || "Unisex",
         stickerLabel1: form.stickerLabel1,
@@ -564,6 +563,7 @@ export default function ProductsPage() {
         returnPolicy: form.returnPolicy || "",
         colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
         stickerLabel2: form.stickerLabel2 || "",
+        fabricCare: form.fabricCare || "",
       };
 
       if (editingProduct) {

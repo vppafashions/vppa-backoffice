@@ -76,6 +76,7 @@ export interface ProductExtras {
   returnPolicy?: string;
   colorImages?: string;
   stickerLabel2?: string;
+  fabricCare?: string;
 }
 
 export async function getProductExtras(id: string): Promise<ProductExtras> {
