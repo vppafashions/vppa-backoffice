@@ -28,7 +28,14 @@ import {
   isCollectionSlug,
 } from "@/lib/appwrite/collection-slugs";
 import { getHsnCodes } from "@/lib/appwrite/hsn-codes";
-import { createProduct, deleteProduct, getProducts, updateProduct } from "@/lib/appwrite/products";
+import {
+  createProduct,
+  deleteProduct,
+  getProductExtras,
+  getProducts,
+  saveProductExtras,
+  updateProduct,
+} from "@/lib/appwrite/products";
 import { getSizeGuides } from "@/lib/appwrite/size-guides";
 import type { HsnCode, Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
 
@@ -319,9 +326,10 @@ export default function ProductsPage() {
     setDialogOpen(true);
   };
 
-  const handleDuplicate = (product: Product) => {
+  const handleDuplicate = async (product: Product) => {
     setEditingProduct(null);
     const nextId = getNextProductId(products);
+    const extras = await getProductExtras(product.$id);
     setForm({
       name: `${product.name} (Copy)`,
       itemCode: nextId,
@@ -340,11 +348,11 @@ export default function ProductsPage() {
       slug: "",
       productType: product.productType || "",
       fabricCare: product.fabricCare2 || product.fabricCare || "",
-      returnPolicy: product.returnPolicy || "",
+      returnPolicy: extras.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
       stickerLabel1: product.stickerLabel1 || "",
-      stickerLabel2: product.stickerLabel2 || "",
+      stickerLabel2: extras.stickerLabel2 || "",
       metaTitle: "",
       metaDescription: "",
       seoKeywords: "",
@@ -358,7 +366,8 @@ export default function ProductsPage() {
     }
     setVariantInventory(parseVariantInventory(product.variantInventory));
     try {
-      setColorImages(product.colorImages ? JSON.parse(product.colorImages) : {});
+      const ci = extras.colorImages || "";
+      setColorImages(ci ? JSON.parse(ci) : {});
     } catch {
       setColorImages({});
     }
@@ -366,8 +375,9 @@ export default function ProductsPage() {
     toast.info("Product duplicated — SEO fields cleared for regeneration");
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = async (product: Product) => {
     setEditingProduct(product);
+    const extras = await getProductExtras(product.$id);
     setForm({
       name: product.name,
       itemCode: product.itemCode || "",
@@ -386,11 +396,11 @@ export default function ProductsPage() {
       slug: product.slug || "",
       productType: product.productType || "",
       fabricCare: product.fabricCare2 || product.fabricCare || "",
-      returnPolicy: product.returnPolicy || "",
+      returnPolicy: extras.returnPolicy || "",
       sizeGuideId: product.sizeGuideId || "",
       gender: product.gender || "Unisex",
       stickerLabel1: product.stickerLabel1 || "",
-      stickerLabel2: product.stickerLabel2 || "",
+      stickerLabel2: extras.stickerLabel2 || "",
       ...parseSeoData(product.seoData),
     });
     try {
@@ -400,7 +410,8 @@ export default function ProductsPage() {
     }
     setVariantInventory(parseVariantInventory(product.variantInventory));
     try {
-      setColorImages(product.colorImages ? JSON.parse(product.colorImages) : {});
+      const ci = extras.colorImages || "";
+      setColorImages(ci ? JSON.parse(ci) : {});
     } catch {
       setColorImages({});
     }
@@ -549,11 +560,19 @@ export default function ProductsPage() {
         }),
       };
 
+      const extrasData = {
+        returnPolicy: form.returnPolicy || "",
+        colorImages: Object.keys(colorImages).length > 0 ? JSON.stringify(colorImages) : "",
+        stickerLabel2: form.stickerLabel2 || "",
+      };
+
       if (editingProduct) {
         await updateProduct(editingProduct.$id, data);
+        await saveProductExtras(editingProduct.$id, extrasData, false);
         toast.success("Product updated");
       } else {
-        await createProduct(data);
+        const created = await createProduct(data);
+        await saveProductExtras(created.$id, extrasData, true);
         toast.success("Product created");
       }
       setDialogOpen(false);
