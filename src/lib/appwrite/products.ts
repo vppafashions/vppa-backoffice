@@ -58,4 +58,61 @@ export async function deleteProduct(id: string) {
     collectionId: "products",
     documentId: id,
   });
+  // Also delete linked extras (ignore if not found)
+  try {
+    await dataProxy({
+      action: "delete",
+      collectionId: "productExtras",
+      documentId: id,
+    });
+  } catch {
+    // extras doc may not exist for older products
+  }
+}
+
+// --- Product Extras (linked by same $id) ---
+
+export interface ProductExtras {
+  returnPolicy?: string;
+  colorImages?: string;
+  stickerLabel2?: string;
+}
+
+export async function getProductExtras(id: string): Promise<ProductExtras> {
+  try {
+    return await dataProxy({
+      action: "get",
+      collectionId: "productExtras",
+      documentId: id,
+    });
+  } catch {
+    return {};
+  }
+}
+
+export async function saveProductExtras(id: string, data: ProductExtras, isNew: boolean) {
+  if (isNew) {
+    return dataProxy({
+      action: "create",
+      collectionId: "productExtras",
+      documentId: id,
+      data,
+    });
+  }
+  // Try update first; if it doesn't exist yet, create it
+  try {
+    return await dataProxy({
+      action: "update",
+      collectionId: "productExtras",
+      documentId: id,
+      data,
+    });
+  } catch {
+    return dataProxy({
+      action: "create",
+      collectionId: "productExtras",
+      documentId: id,
+      data,
+    });
+  }
 }
