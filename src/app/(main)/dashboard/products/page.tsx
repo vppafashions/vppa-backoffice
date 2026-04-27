@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ChevronLeft, ChevronRight, ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -317,6 +317,53 @@ export default function ProductsPage() {
     setVariantInventory([]);
     setColorImages({});
     setDialogOpen(true);
+  };
+
+  const handleDuplicate = (product: Product) => {
+    setEditingProduct(null);
+    const nextId = getNextProductId(products);
+    setForm({
+      name: `${product.name} (Copy)`,
+      itemCode: nextId,
+      hsnCode: product.hsnCode || "",
+      description: product.description || "",
+      price: String(product.price),
+      originalPrice: String(product.originalPrice || ""),
+      category: product.category || "",
+      collectionSlug: isCollectionSlug(product.collectionSlug) ? product.collectionSlug : "",
+      sizes: product.sizes || "",
+      colors: product.colors || "",
+      stockQuantity: String(product.stockQuantity ?? 0),
+      displayOnMainPage: product.displayOnMainPage ?? false,
+      displayOnCollectionPage: product.displayOnCollectionPage ?? true,
+      featured: product.featured || false,
+      slug: "",
+      productType: product.productType || "",
+      fabricCare: product.fabricCare2 || product.fabricCare || "",
+      returnPolicy: product.returnPolicy || "",
+      sizeGuideId: product.sizeGuideId || "",
+      gender: product.gender || "Unisex",
+      stickerLabel1: product.stickerLabel1 || "",
+      stickerLabel2: product.stickerLabel2 || "",
+      metaTitle: "",
+      metaDescription: "",
+      seoKeywords: "",
+      ogTitle: "",
+      ogDescription: "",
+    });
+    try {
+      setImages(product.images ? JSON.parse(product.images) : []);
+    } catch {
+      setImages([]);
+    }
+    setVariantInventory(parseVariantInventory(product.variantInventory));
+    try {
+      setColorImages(product.colorImages ? JSON.parse(product.colorImages) : {});
+    } catch {
+      setColorImages({});
+    }
+    setDialogOpen(true);
+    toast.info("Product duplicated — SEO fields cleared for regeneration");
   };
 
   const handleEdit = (product: Product) => {
@@ -725,6 +772,15 @@ export default function ProductsPage() {
                                 onClick={() => handleEdit(product)}
                               >
                                 <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8"
+                                title="Duplicate"
+                                onClick={() => handleDuplicate(product)}
+                              >
+                                <Copy className="size-4" />
                               </Button>
                               <Button
                                 size="icon"
