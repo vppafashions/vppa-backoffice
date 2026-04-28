@@ -1329,18 +1329,31 @@ export default function ProductsPage() {
                               setColorImageUploading(color);
                               try {
                                 const urls: string[] = [];
+                                let failCount = 0;
                                 for (const file of Array.from(files)) {
-                                  const url = await uploadImage(file);
-                                  urls.push(url);
+                                  try {
+                                    const url = await uploadImage(file);
+                                    urls.push(url);
+                                  } catch (err) {
+                                    console.error(`Upload failed for ${file.name}:`, err);
+                                    failCount++;
+                                  }
                                 }
-                                setColorImages((prev) => ({
-                                  ...prev,
-                                  [color]: [...(prev[color] || []), ...urls],
-                                }));
-                                toast.success(`Uploaded ${urls.length} image(s) for ${color}`);
+                                if (urls.length > 0) {
+                                  setColorImages((prev) => ({
+                                    ...prev,
+                                    [color]: [...(prev[color] || []), ...urls],
+                                  }));
+                                }
+                                if (failCount > 0) {
+                                  toast.error(`${failCount} image(s) failed to upload for ${color}`);
+                                }
+                                if (urls.length > 0) {
+                                  toast.success(`Uploaded ${urls.length} image(s) for ${color}`);
+                                }
                               } catch (error) {
                                 console.error("Upload failed:", error);
-                                toast.error(`Failed to upload image for ${color}`);
+                                toast.error(`Failed to upload images for ${color}`);
                               } finally {
                                 setColorImageUploading(null);
                               }
@@ -1459,8 +1472,14 @@ export default function ProductsPage() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : editingProduct ? "Update" : "Create"}
+            <Button onClick={handleSave} disabled={saving || uploading || !!colorImageUploading}>
+              {saving
+                ? "Saving..."
+                : uploading || colorImageUploading
+                  ? "Uploading..."
+                  : editingProduct
+                    ? "Update"
+                    : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
