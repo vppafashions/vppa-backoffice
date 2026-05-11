@@ -22,6 +22,7 @@ export const COLLECTION_IDS = {
   wishlists: "wishlists",
   returns: "returns",
   coupons: "coupons",
+  reviews: "reviews",
 } as const;
 
 export const CLOUDINARY = {

@@ -129,6 +129,17 @@ export interface SizeGuide extends Models.Document {
   measureImage: string;
 }
 
+export interface Review extends Models.Document {
+  productId: string;
+  rating: number;
+  title: string;
+  comment: string;
+  authorName: string;
+  authorEmail: string;
+  photoUrl?: string;
+  approved: boolean;
+}
+
 export interface Customer extends Models.Document {
   userId: string;
   firstName: string;
