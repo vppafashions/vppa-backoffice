@@ -195,12 +195,12 @@ export default function OrdersPage() {
       </Card>
 
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle>Order Details</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4">
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">Customer</Label>
@@ -431,7 +431,7 @@ export default function OrdersPage() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
             </DialogClose>
