@@ -128,6 +128,8 @@ export default function OrdersPage() {
                 <TableRow>
                   <TableHead>Order ID</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Address</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -142,6 +144,12 @@ export default function OrdersPage() {
                       <div>
                         <div className="font-medium">{order.customerName}</div>
                         <div className="text-muted-foreground text-xs">{order.email}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">{order.phone || "—"}</TableCell>
+                    <TableCell className="max-w-xs text-muted-foreground text-xs">
+                      <div className="line-clamp-2 whitespace-pre-wrap" title={order.address || ""}>
+                        {order.address || "—"}
                       </div>
                     </TableCell>
                     <TableCell>{formatCurrency(order.total)}</TableCell>
