@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,18 @@ export default function OrdersPage() {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [courier, setCourier] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast.success(`${field} copied`);
+      setTimeout(() => setCopiedField((c) => (c === field ? null : c)), 1500);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -191,16 +204,49 @@ export default function OrdersPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">Customer</Label>
-                  <p className="font-medium">{selectedOrder.customerName}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="flex-1 font-medium break-words">{selectedOrder.customerName}</p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => copyToClipboard(selectedOrder.customerName, "Name")}
+                      aria-label="Copy name"
+                    >
+                      {copiedField === "Name" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Email</Label>
-                  <p className="font-medium">{selectedOrder.email}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="flex-1 font-medium break-all">{selectedOrder.email}</p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => copyToClipboard(selectedOrder.email, "Email")}
+                      aria-label="Copy email"
+                    >
+                      {copiedField === "Email" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
                 </div>
                 {selectedOrder.phone && (
                   <div>
                     <Label className="text-muted-foreground">Phone</Label>
-                    <p className="font-medium">{selectedOrder.phone}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="flex-1 font-medium">{selectedOrder.phone}</p>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => copyToClipboard(selectedOrder.phone || "", "Phone")}
+                        aria-label="Copy phone"
+                      >
+                        {copiedField === "Phone" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <div>
@@ -212,7 +258,18 @@ export default function OrdersPage() {
               {selectedOrder.address && (
                 <div className="text-sm">
                   <Label className="text-muted-foreground">Address</Label>
-                  <p className="font-medium">{selectedOrder.address}</p>
+                  <div className="flex items-start gap-1">
+                    <p className="flex-1 font-medium whitespace-pre-wrap">{selectedOrder.address}</p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => copyToClipboard(selectedOrder.address || "", "Address")}
+                      aria-label="Copy address"
+                    >
+                      {copiedField === "Address" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
                 </div>
               )}
 
