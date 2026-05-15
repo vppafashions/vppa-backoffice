@@ -328,11 +328,17 @@ export default function ProductsPage() {
 
   const handleToggleVisibility = async (product: Product) => {
     const isHiding = product.displayOnCollectionPage !== false;
+    const newValue = !isHiding;
+    // Optimistic UI: flip immediately so the click feels instant.
+    setProducts((prev) => prev.map((p) => (p.$id === product.$id ? { ...p, displayOnCollectionPage: newValue } : p)));
     try {
-      await updateProduct(product.$id, { displayOnCollectionPage: !isHiding });
+      await updateProduct(product.$id, { displayOnCollectionPage: newValue });
       toast.success(isHiding ? "Hidden from storefront" : "Visible on storefront");
-      fetchProducts();
     } catch (err) {
+      // Roll back the optimistic change if the save fails.
+      setProducts((prev) =>
+        prev.map((p) => (p.$id === product.$id ? { ...p, displayOnCollectionPage: !newValue } : p)),
+      );
       toast.error(err instanceof Error ? err.message : "Failed to update visibility");
     }
   };
@@ -778,8 +784,9 @@ export default function ProductsPage() {
                           /* ignore */
                         }
                       }
+                      const isHidden = product.displayOnCollectionPage === false;
                       return (
-                        <TableRow key={product.$id}>
+                        <TableRow key={product.$id} className={isHidden ? "bg-red-50/50 dark:bg-red-950/20" : ""}>
                           <TableCell className="w-14 min-w-14 p-2">
                             {firstImage ? (
                               <img
@@ -787,7 +794,7 @@ export default function ProductsPage() {
                                 alt={product.name}
                                 width={40}
                                 height={40}
-                                className="h-10 w-10 min-w-10 rounded-md border object-cover"
+                                className={`h-10 w-10 min-w-10 rounded-md border object-cover ${isHidden ? "opacity-50 grayscale" : ""}`}
                               />
                             ) : (
                               <div className="flex h-10 w-10 min-w-10 items-center justify-center rounded-md border bg-muted">
@@ -795,7 +802,14 @@ export default function ProductsPage() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell className={`font-medium ${isHidden ? "text-muted-foreground line-through" : ""}`}>
+                            {product.name}
+                            {isHidden && (
+                              <span className="ml-2 inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 no-underline dark:bg-red-900/40 dark:text-red-300">
+                                HIDDEN
+                              </span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button
