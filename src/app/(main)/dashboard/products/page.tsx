@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ChevronLeft, ChevronRight, Copy, ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Eye, EyeOff, ImageIcon, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -324,6 +324,17 @@ export default function ProductsPage() {
     setVariantInventory([]);
     setColorImages({});
     setDialogOpen(true);
+  };
+
+  const handleToggleVisibility = async (product: Product) => {
+    const isHiding = product.displayOnCollectionPage !== false;
+    try {
+      await updateProduct(product.$id, { displayOnCollectionPage: !isHiding });
+      toast.success(isHiding ? "Hidden from storefront" : "Visible on storefront");
+      fetchProducts();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update visibility");
+    }
   };
 
   const handleDuplicate = async (product: Product) => {
@@ -803,6 +814,25 @@ export default function ProductsPage() {
                                 onClick={() => handleDuplicate(product)}
                               >
                                 <Copy className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`size-8 ${
+                                  product.displayOnCollectionPage === false ? "text-red-600 hover:text-red-700" : ""
+                                }`}
+                                title={
+                                  product.displayOnCollectionPage === false
+                                    ? "Hidden from storefront - click to show"
+                                    : "Visible on storefront - click to hide"
+                                }
+                                onClick={() => handleToggleVisibility(product)}
+                              >
+                                {product.displayOnCollectionPage === false ? (
+                                  <EyeOff className="size-4" />
+                                ) : (
+                                  <Eye className="size-4" />
+                                )}
                               </Button>
                               <Button
                                 size="icon"
