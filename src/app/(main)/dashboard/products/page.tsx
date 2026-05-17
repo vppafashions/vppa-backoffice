@@ -67,6 +67,19 @@ function generateSlug(gender: string, productType: string, name: string): string
   return `/${parts.join("/")}`;
 }
 
+function uniqueSlug(desired: string, existing: { $id: string; slug?: string }[], ignoreId?: string): string {
+  const taken = new Set(
+    existing
+      .filter((p) => p.$id !== ignoreId)
+      .map((p) => (p.slug || "").trim())
+      .filter(Boolean),
+  );
+  if (!taken.has(desired)) return desired;
+  let i = 2;
+  while (taken.has(`${desired}-${i}`)) i++;
+  return `${desired}-${i}`;
+}
+
 const GENDER_CODE: Record<string, string> = { Men: "1", Women: "2", Unisex: "3", Kids: "4" };
 
 const SIZE_CODE: Record<string, string> = {
@@ -560,7 +573,11 @@ export default function ProductsPage() {
         displayOnCollectionPage: form.displayOnCollectionPage,
         featured: form.featured,
         inStock: stockQuantity > 0,
-        slug: form.slug || generateSlug(form.gender, form.productType, form.name),
+        slug: uniqueSlug(
+          form.slug || generateSlug(form.gender, form.productType, form.name),
+          products,
+          editingProduct?.$id,
+        ),
         productType: form.productType,
         sku: skuToUse,
         variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
