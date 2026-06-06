@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { deleteInvoice, getInvoices } from "@/lib/appwrite/invoices";
+import { deleteInvoice, getInvoice, getInvoices } from "@/lib/appwrite/invoices";
 import type { Invoice } from "@/lib/appwrite/types";
 
 import InvoiceForm from "./_components/invoice-form";
@@ -48,6 +48,22 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
+
+  // Support ?view=<invoiceId> query param to open PDF view directly
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewId = params.get("view");
+    if (viewId) {
+      getInvoice(viewId)
+        .then((inv) => {
+          setSelectedInvoice(inv);
+          setViewMode("pdf");
+        })
+        .catch(() => {
+          toast.error("Invoice not found");
+        });
+    }
+  }, []);
 
   const handleDelete = async () => {
     if (!deletingInvoice) return;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { findInvoiceByOrderId, generateInvoiceFromOrder } from "@/lib/appwrite/invoices";
 import { getOrders, sendOrderStatusEmail, updateOrderStatus, updateOrderTracking } from "@/lib/appwrite/orders";
-import type { Order, OrderItem, StatusTimeline } from "@/lib/appwrite/types";
+import type { Invoice, Order, OrderItem, StatusTimeline } from "@/lib/appwrite/types";
 
 const STATUS_COLORS: Record<Order["status"], string> = {
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -34,6 +35,9 @@ export default function OrdersPage() {
   const [courier, setCourier] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [orderInvoice, setOrderInvoice] = useState<Invoice | null>(null);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
@@ -176,11 +180,21 @@ export default function OrdersPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
+                        onClick={async () => {
                           setSelectedOrder(order);
                           setTrackingNumber(order.trackingNumber || "");
                           setCourier(order.courier || "");
                           setDetailsOpen(true);
+                          setOrderInvoice(null);
+                          setLoadingInvoice(true);
+                          try {
+                            const inv = await findInvoiceByOrderId(order.$id);
+                            setOrderInvoice(inv);
+                          } catch {
+                            // ignore
+                          } finally {
+                            setLoadingInvoice(false);
+                          }
                         }}
                       >
                         View
@@ -429,6 +443,72 @@ export default function OrdersPage() {
                   <p>{selectedOrder.notes}</p>
                 </div>
               )}
+
+              {/* Invoice Section */}
+              <div className="space-y-3 rounded-lg border p-4">
+                <Label className="font-semibold">Invoice</Label>
+                {loadingInvoice ? (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking for invoice...
+                  </div>
+                ) : orderInvoice ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="h-4 w-4 text-green-600" />
+                      <span>
+                        Invoice <span className="font-mono font-medium">#{orderInvoice.invoiceNumber}</span> —{" "}
+                        {new Intl.NumberFormat("en-IN", {
+                          style: "currency",
+                          currency: "INR",
+                          maximumFractionDigits: 2,
+                        }).format(orderInvoice.grandTotal)}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        window.open(`/dashboard/invoices?view=${orderInvoice.$id}`, "_blank");
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      View Invoice
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={generatingInvoice}
+                    onClick={async () => {
+                      if (!selectedOrder) return;
+                      setGeneratingInvoice(true);
+                      try {
+                        const inv = await generateInvoiceFromOrder(selectedOrder);
+                        setOrderInvoice(inv);
+                        toast.success(`Invoice #${inv.invoiceNumber} generated`);
+                      } catch (error) {
+                        console.error("Invoice generation failed:", error);
+                        toast.error("Failed to generate invoice");
+                      } finally {
+                        setGeneratingInvoice(false);
+                      }
+                    }}
+                  >
+                    {generatingInvoice ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Invoice
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter className="shrink-0 border-t px-6 py-4">

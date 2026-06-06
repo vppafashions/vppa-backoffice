@@ -1,6 +1,7 @@
 "use client";
 
-import type { Invoice } from "./types";
+import { calculateInvoiceItem, calculateInvoiceTotals } from "../invoice-pdf";
+import type { Invoice, Order, OrderItem } from "./types";
 
 async function dataProxy(body: Record<string, unknown>) {
   const res = await fetch("/api/data", {
@@ -74,4 +75,67 @@ export async function getNextInvoiceNumber(): Promise<string> {
   }
   const lastNumber = Number.parseInt(response.documents[0].invoiceNumber, 10);
   return String(Number.isNaN(lastNumber) ? 1001 : lastNumber + 1);
+}
+
+export async function findInvoiceByOrderId(orderId: string): Promise<Invoice | null> {
+  const response = await dataProxy({
+    action: "list",
+    collectionId: "invoices",
+    queries: [
+      { method: "equal", args: ["orderNumber", [`#${orderId.slice(0, 8)}`]] },
+      { method: "limit", args: [1] },
+    ],
+  });
+  return response.documents.length > 0 ? (response.documents[0] as Invoice) : null;
+}
+
+export async function generateInvoiceFromOrder(order: Order): Promise<Invoice> {
+  const invoiceNumber = await getNextInvoiceNumber();
+  const today = new Date().toISOString().split("T")[0];
+
+  let orderItems: OrderItem[] = [];
+  try {
+    orderItems = JSON.parse(order.items);
+  } catch {
+    orderItems = [];
+  }
+
+  const invoiceItems = orderItems.map((item) =>
+    calculateInvoiceItem(
+      `${item.name}${item.size ? ` (${item.size})` : ""}${item.color ? ` - ${item.color}` : ""}`,
+      item.quantity,
+      item.price,
+      item.price,
+    ),
+  );
+
+  const totals = calculateInvoiceTotals(invoiceItems, 0, 0);
+
+  const data = {
+    invoiceNumber,
+    invoiceDate: today,
+    orderNumber: `#${order.$id.slice(0, 8)}`,
+    orderDate: order.$createdAt ? order.$createdAt.split("T")[0] : today,
+    customerName: order.customerName,
+    customerAddress: order.address || "",
+    customerPhone: order.phone || "",
+    customerEmail: order.email || "",
+    customerPin: "",
+    customerState: "",
+    stateCode: "",
+    placeOfSupply: "",
+    modeOfTransport: "",
+    items: JSON.stringify(invoiceItems),
+    subtotal: totals.subtotal,
+    taxableAmount: totals.taxableAmount,
+    cgstAmount: totals.cgstAmount,
+    sgstAmount: totals.sgstAmount,
+    totalTax: totals.totalTax,
+    shippingAmount: 0,
+    discount: 0,
+    grandTotal: totals.grandTotal,
+    status: "paid" as const,
+  };
+
+  return createInvoice(data);
 }
