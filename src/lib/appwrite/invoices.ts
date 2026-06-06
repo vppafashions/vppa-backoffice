@@ -61,20 +61,23 @@ export async function deleteInvoice(id: string) {
   });
 }
 
-export async function getNextInvoiceNumber(): Promise<string> {
+export async function getNextInvoiceNumber(prefix: "ECOM" | "STORE" = "STORE"): Promise<string> {
   const response = await dataProxy({
     action: "list",
     collectionId: "invoices",
     queries: [
       { method: "orderDesc", args: ["$createdAt"] },
-      { method: "limit", args: [1] },
+      { method: "limit", args: [100] },
     ],
   });
-  if (response.documents.length === 0) {
-    return "1001";
-  }
-  const lastNumber = Number.parseInt(response.documents[0].invoiceNumber, 10);
-  return String(Number.isNaN(lastNumber) ? 1001 : lastNumber + 1);
+  const docs = response.documents as Invoice[];
+  const prefixPattern = `${prefix}-`;
+  const matching = docs
+    .filter((d: Invoice) => d.invoiceNumber.startsWith(prefixPattern))
+    .map((d: Invoice) => Number.parseInt(d.invoiceNumber.replace(prefixPattern, ""), 10))
+    .filter((n: number) => !Number.isNaN(n));
+  const maxNum = matching.length > 0 ? Math.max(...matching) : 1000;
+  return `${prefix}-${maxNum + 1}`;
 }
 
 export async function findInvoiceByOrderId(orderId: string): Promise<Invoice | null> {
@@ -90,7 +93,7 @@ export async function findInvoiceByOrderId(orderId: string): Promise<Invoice | n
 }
 
 export async function generateInvoiceFromOrder(order: Order): Promise<Invoice> {
-  const invoiceNumber = await getNextInvoiceNumber();
+  const invoiceNumber = await getNextInvoiceNumber("ECOM");
   const today = new Date().toISOString().split("T")[0];
 
   let orderItems: OrderItem[] = [];

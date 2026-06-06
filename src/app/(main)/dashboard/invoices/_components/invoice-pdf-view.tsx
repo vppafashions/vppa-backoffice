@@ -744,9 +744,6 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
           <p style={{ color: "red", marginBottom: 4 }}>
             This is computer generated invoice and hence no signature is required
           </p>
-          <p>
-            <strong>Powered By GST Pro</strong>
-          </p>
         </div>
       </div>
     </div>
