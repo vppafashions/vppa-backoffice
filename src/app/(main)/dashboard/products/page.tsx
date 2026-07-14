@@ -38,6 +38,13 @@ import {
 } from "@/lib/appwrite/products";
 import { getSizeGuides } from "@/lib/appwrite/size-guides";
 import type { HsnCode, Product, SizeGuide, VariantInventoryItem } from "@/lib/appwrite/types";
+import {
+  buildVariantGrid,
+  getNextProductId,
+  initColorCodesFromProducts,
+  parseVariantInventory,
+  totalVariantStock,
+} from "@/lib/product-variants";
 
 const DEFAULT_PRODUCT_TYPES = [
   "Hoodie",
@@ -80,75 +87,6 @@ function uniqueSlug(desired: string, existing: { $id: string; slug?: string }[],
   return `${desired}-${i}`;
 }
 
-const GENDER_CODE: Record<string, string> = { Men: "1", Women: "2", Unisex: "3", Kids: "4" };
-
-const SIZE_CODE: Record<string, string> = {
-  XS: "01",
-  S: "02",
-  M: "03",
-  L: "04",
-  XL: "05",
-  XXL: "06",
-  XXXL: "07",
-  Free: "99",
-  "Free Size": "99",
-};
-
-function getSizeCode(size: string): string {
-  const upper = size.trim().toUpperCase();
-  if (SIZE_CODE[upper]) return SIZE_CODE[upper];
-  // For numeric sizes (28, 30, etc.), use last 2 digits
-  const num = Number.parseInt(size.trim(), 10);
-  if (!Number.isNaN(num)) return String(num % 100).padStart(2, "0");
-  return "00";
-}
-
-let colorCodeCounter = 1;
-const colorCodeMap: Record<string, string> = {};
-
-function getColorCode(color: string): string {
-  const key = color.trim().toLowerCase();
-  if (!colorCodeMap[key]) {
-    colorCodeMap[key] = String(colorCodeCounter).padStart(2, "0");
-    colorCodeCounter++;
-  }
-  return colorCodeMap[key];
-}
-
-function initColorCodes(products: Product[]) {
-  colorCodeCounter = 1;
-  const seen = new Set<string>();
-  for (const p of products) {
-    if (!p.colors) continue;
-    for (const c of p.colors.split(",")) {
-      const key = c.trim().toLowerCase();
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        colorCodeMap[key] = String(colorCodeCounter).padStart(2, "0");
-        colorCodeCounter++;
-      }
-    }
-  }
-}
-
-function generateVariantItemCode(productId: string, gender: string, size: string, color: string): string {
-  const pid = productId.padStart(5, "0");
-  const g = GENDER_CODE[gender] || "3";
-  const s = getSizeCode(size);
-  const c = getColorCode(color);
-  return `${pid}${g}${s}${c}001`;
-}
-
-function getNextProductId(products: Product[]): string {
-  let max = 99; // Start from 00100
-  for (const p of products) {
-    const code = p.itemCode || "";
-    const num = Number.parseInt(code, 10);
-    if (!Number.isNaN(num) && num > max) max = num;
-  }
-  return String(max + 1).padStart(5, "0");
-}
-
 interface ProductForm {
   name: string;
   itemCode: string;
@@ -177,50 +115,6 @@ interface ProductForm {
   seoKeywords: string;
   ogTitle: string;
   ogDescription: string;
-}
-
-function parseVariantInventory(raw: string | undefined | null): VariantInventoryItem[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-function buildVariantGrid(
-  sizes: string,
-  colors: string,
-  existing: VariantInventoryItem[],
-  productId: string,
-  gender: string,
-): VariantInventoryItem[] {
-  const sizeList = sizes
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const colorList = colors
-    .split(",")
-    .map((c) => c.trim())
-    .filter(Boolean);
-  if (sizeList.length === 0 || colorList.length === 0) return existing;
-  const grid: VariantInventoryItem[] = [];
-  for (const size of sizeList) {
-    for (const color of colorList) {
-      const found = existing.find(
-        (v) => v.size.toLowerCase() === size.toLowerCase() && v.color.toLowerCase() === color.toLowerCase(),
-      );
-      const itemCode = generateVariantItemCode(productId, gender, size, color);
-      grid.push({ size, color, stock: found?.stock ?? 0, itemCode });
-    }
-  }
-  return grid;
-}
-
-function totalVariantStock(variants: VariantInventoryItem[]): number {
-  return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
 }
 
 function parseSeoData(raw: string | undefined | null): {
@@ -305,7 +199,7 @@ export default function ProductsPage() {
     try {
       const res = await getProducts();
       const docs = res.documents as Product[];
-      initColorCodes(docs);
+      initColorCodesFromProducts(docs);
       setProducts(docs);
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -488,8 +382,15 @@ export default function ProductsPage() {
       return;
     }
 
-    const hasVariants = variantInventory.length > 0;
-    const stockQuantity = hasVariants ? totalVariantStock(variantInventory) : Number.parseInt(form.stockQuantity, 10);
+    let finalVariantInventory = variantInventory;
+    if (finalVariantInventory.length === 0 && (form.sizes || form.colors || form.itemCode)) {
+      finalVariantInventory = buildVariantGrid(form.sizes, form.colors, variantInventory, form.itemCode, form.gender);
+    }
+
+    const hasVariants = finalVariantInventory.length > 0;
+    const stockQuantity = hasVariants
+      ? totalVariantStock(finalVariantInventory)
+      : Number.parseInt(form.stockQuantity, 10);
     if (Number.isNaN(stockQuantity) || stockQuantity < 0) {
       toast.error("Stock quantity must be a valid non-negative number");
       return;
@@ -580,7 +481,7 @@ export default function ProductsPage() {
         ),
         productType: form.productType,
         sku: skuToUse,
-        variantInventory: variantInventory.length > 0 ? JSON.stringify(variantInventory) : "",
+        variantInventory: finalVariantInventory.length > 0 ? JSON.stringify(finalVariantInventory) : "",
         sizeGuideId: form.sizeGuideId,
         gender: form.gender || "Unisex",
         stickerLabel1: form.stickerLabel1,
@@ -1229,7 +1130,7 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {form.sizes && form.colors && (
+            {(form.sizes || form.colors || form.itemCode) && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Variant Inventory (Size × Color)</Label>
@@ -1298,7 +1199,8 @@ export default function ProductsPage() {
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-xs">
-                    Click &quot;Generate Grid&quot; to create inventory slots for each size × color combination.
+                    Click &quot;Generate Grid&quot; to preview variants. Variants are also auto-created on save from
+                    sizes and colors (missing values use Free Size / Standard).
                   </p>
                 )}
               </div>

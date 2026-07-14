@@ -15,22 +15,12 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getProducts } from "@/lib/appwrite/products";
 import type { Product, VariantInventoryItem } from "@/lib/appwrite/types";
+import { getProductVariants, initColorCodesFromProducts } from "@/lib/product-variants";
 import { VPPA_LOGO_DATA_URI } from "@/lib/vppa-logo";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
-
-function parseVariants(raw: string | undefined | null): VariantInventoryItem[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -467,7 +457,9 @@ export default function StickerPrinterPage() {
   const fetchProducts = useCallback(async () => {
     try {
       const res = await getProducts(500);
-      setProducts(res.documents as Product[]);
+      const docs = res.documents as Product[];
+      initColorCodesFromProducts(docs);
+      setProducts(docs);
     } catch (error) {
       console.error("Failed to fetch products:", error);
       toast.error("Failed to load products");
@@ -480,9 +472,9 @@ export default function StickerPrinterPage() {
     fetchProducts();
   }, [fetchProducts]);
 
-  // All variants across all products for search
+  // All variants across all products for search (includes synthesized variants for legacy products)
   const allVariants = products.flatMap((p) => {
-    const variants = parseVariants(p.variantInventory);
+    const variants = getProductVariants(p, products);
     return variants.map((v) => ({ product: p, variant: v }));
   });
 
@@ -496,7 +488,7 @@ export default function StickerPrinterPage() {
       )
     : [];
 
-  const selectedVariants = selectedProduct ? parseVariants(selectedProduct.variantInventory) : [];
+  const selectedVariants = selectedProduct ? getProductVariants(selectedProduct, products) : [];
 
   const currentVariant = selectedVariantIdx ? selectedVariants[Number.parseInt(selectedVariantIdx, 10)] : null;
 
@@ -667,7 +659,7 @@ export default function StickerPrinterPage() {
                           className="w-full p-2 text-left text-sm hover:bg-muted/50 transition-colors"
                           onClick={() => {
                             setSelectedProduct(item.product);
-                            const variants = parseVariants(item.product.variantInventory);
+                            const variants = getProductVariants(item.product, products);
                             const idx = variants.findIndex((v) => v.itemCode === item.variant.itemCode);
                             setSelectedVariantIdx(idx >= 0 ? String(idx) : "0");
                             setSearchQuery("");
@@ -693,7 +685,8 @@ export default function StickerPrinterPage() {
                   onValueChange={(id) => {
                     const p = products.find((prod) => prod.$id === id);
                     setSelectedProduct(p || null);
-                    setSelectedVariantIdx("");
+                    const variants = p ? getProductVariants(p, products) : [];
+                    setSelectedVariantIdx(variants.length > 0 ? "0" : "");
                   }}
                   options={products.map((p) => ({ value: p.$id, label: `${p.name} (${p.itemCode})` }))}
                   placeholder="Choose a product..."
@@ -702,6 +695,12 @@ export default function StickerPrinterPage() {
               </div>
 
               {/* Variant selector */}
+              {selectedProduct && selectedVariants.length === 0 && (
+                <p className="text-destructive text-sm">
+                  No printable variants found. Add sizes or colors on the product, then save it again.
+                </p>
+              )}
+
               {selectedProduct && selectedVariants.length > 0 && (
                 <div className="space-y-2">
                   <Label>Select Variant</Label>
@@ -769,8 +768,10 @@ export default function StickerPrinterPage() {
                   )}
                 </div>
               ) : (
-                <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
-                  Select a product and variant to preview the sticker
+                <div className="flex h-64 items-center justify-center px-6 text-center text-muted-foreground text-sm">
+                  {selectedProduct
+                    ? "Select a variant above to preview the sticker"
+                    : "Select a product and variant to preview the sticker"}
                 </div>
               )}
             </CardContent>
