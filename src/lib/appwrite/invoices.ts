@@ -92,6 +92,20 @@ export async function findInvoiceByOrderId(orderId: string): Promise<Invoice | n
   return response.documents.length > 0 ? (response.documents[0] as Invoice) : null;
 }
 
+/** Resolve coupon discount from order; fall back to items − paid total for legacy orders. */
+function resolveOrderDiscount(order: Order, itemsSubtotal: number): number {
+  const stored = order.discount;
+  if (typeof stored === "number" && Number.isFinite(stored) && stored > 0) {
+    return Math.min(stored, itemsSubtotal);
+  }
+  // Legacy orders: discount was only reflected in order.total
+  if (stored === undefined || stored === null) {
+    const inferred = Math.round((itemsSubtotal - (order.total || 0)) * 100) / 100;
+    return Math.min(Math.max(0, inferred), itemsSubtotal);
+  }
+  return 0;
+}
+
 export async function generateInvoiceFromOrder(order: Order): Promise<Invoice> {
   const invoiceNumber = await getNextInvoiceNumber("ECOM");
   const today = new Date().toISOString().split("T")[0];
@@ -112,7 +126,9 @@ export async function generateInvoiceFromOrder(order: Order): Promise<Invoice> {
     ),
   );
 
-  const totals = calculateInvoiceTotals(invoiceItems, 0, 0);
+  const itemsSubtotal = invoiceItems.reduce((sum, item) => sum + item.total, 0);
+  const discountInr = resolveOrderDiscount(order, itemsSubtotal);
+  const totals = calculateInvoiceTotals(invoiceItems, 0, discountInr);
 
   const data = {
     invoiceNumber,
@@ -135,7 +151,8 @@ export async function generateInvoiceFromOrder(order: Order): Promise<Invoice> {
     sgstAmount: totals.sgstAmount,
     totalTax: totals.totalTax,
     shippingAmount: 0,
-    discount: 0,
+    discount: totals.discount,
+    couponCode: order.couponCode || "",
     grandTotal: totals.grandTotal,
     status: "paid" as const,
   };

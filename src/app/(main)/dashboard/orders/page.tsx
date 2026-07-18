@@ -267,6 +267,19 @@ export default function OrdersPage() {
                   <Label className="text-muted-foreground">Total</Label>
                   <p className="font-medium">{formatCurrency(selectedOrder.total)}</p>
                 </div>
+                {(selectedOrder.discount ?? 0) > 0 && (
+                  <div>
+                    <Label className="text-muted-foreground">Coupon discount</Label>
+                    <p className="font-medium">
+                      -{formatCurrency(selectedOrder.discount || 0)}
+                      {selectedOrder.couponCode ? (
+                        <span className="ml-2 font-mono text-muted-foreground text-sm">
+                          ({selectedOrder.couponCode})
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {selectedOrder.address && (

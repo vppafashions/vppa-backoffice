@@ -74,6 +74,10 @@ export interface Order extends Models.Document {
   razorpayOrderId?: string;
   userId?: string;
   statusTimeline?: string;
+  /** Checkout coupon code, if applied */
+  couponCode?: string;
+  /** Inclusive coupon discount amount (INR) */
+  discount?: number;
 }
 
 export interface Hero extends Models.Document {
@@ -247,6 +251,8 @@ export interface Invoice extends Models.Document {
   totalTax: number;
   shippingAmount: number;
   discount: number;
+  /** Coupon code from online checkout, if any */
+  couponCode?: string;
   grandTotal: number;
   status: "draft" | "sent" | "paid" | "cancelled";
   modeOfTransport: string;

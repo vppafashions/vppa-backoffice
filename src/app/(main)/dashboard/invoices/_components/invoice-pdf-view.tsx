@@ -286,7 +286,11 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
           <tr><td>SGST:</td><td class="right">${invoice.sgstAmount.toFixed(2)}</td></tr>
           <tr><td>Total Tax:</td><td class="right">${invoice.totalTax.toFixed(2)}</td></tr>
           ${totalShippingThermal > 0 ? `<tr><td>Shipping:</td><td class="right">${totalShippingThermal.toFixed(2)}</td></tr>` : ""}
-          ${invoice.discount > 0 ? `<tr><td>Discount:</td><td class="right">-${invoice.discount.toFixed(2)}</td></tr>` : ""}
+          ${
+            invoice.discount > 0
+              ? `<tr><td>Discount${invoice.couponCode ? ` (${invoice.couponCode})` : ""}:</td><td class="right">-${invoice.discount.toFixed(2)}</td></tr>`
+              : ""
+          }
         </table>
 
         <div class="separator-double"></div>
@@ -663,7 +667,7 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
                   <tbody>
                     <tr>
                       <td style={{ border: "1px solid #000", padding: "4px 6px" }}>
-                        <strong>Total Discount:</strong>
+                        <strong>Total Discount{invoice.couponCode ? ` (${invoice.couponCode})` : ""}:</strong>
                       </td>
                       <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
                         {formatRs(invoice.discount || 0)}
