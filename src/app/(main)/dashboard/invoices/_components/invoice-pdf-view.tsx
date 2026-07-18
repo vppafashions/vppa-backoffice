@@ -6,7 +6,13 @@ import { Download, Printer, Receipt } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Invoice, InvoiceItem } from "@/lib/appwrite/types";
-import { COMPANY, DEFAULT_CGST_RATE, DEFAULT_SGST_RATE, numberToWords } from "@/lib/invoice-pdf";
+import {
+  COMPANY,
+  DEFAULT_CGST_RATE,
+  DEFAULT_SGST_RATE,
+  numberToWords,
+  withPreTaxBillDiscount,
+} from "@/lib/invoice-pdf";
 import { VPPA_LOGO_DATA_URI } from "@/lib/vppa-logo";
 
 interface InvoicePdfViewProps {
@@ -23,6 +29,9 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
   } catch {
     items = [];
   }
+
+  // Line rates stay as sold; tax columns / HSN use post–bill-discount GST.
+  const taxItems = withPreTaxBillDiscount(items, invoice.discount || 0);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "-";
@@ -118,7 +127,7 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
       string,
       { cgstRate: number; sgstRate: number; taxable: number; cgst: number; sgst: number }
     >();
-    for (const it of items) {
+    for (const it of taxItems) {
       const key = it.hsn;
       const existing = hsnMap.get(key);
       if (existing) {
@@ -501,42 +510,45 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr key={`${item.name}-${item.rate}-${item.quantity}`}>
-                <td style={{ border: "1px solid #000", padding: "4px 6px" }}>{item.name}</td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
-                  {item.originalRate && item.originalRate !== item.rate ? (
-                    <>
-                      <span style={{ textDecoration: "line-through" }}>Rs. {item.originalRate.toFixed(2)}</span> Rs.{" "}
-                      {item.rate.toFixed(2)}
-                    </>
-                  ) : (
-                    <>Rs. {item.rate.toFixed(2)}</>
-                  )}
-                </td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
-                  {formatRs(item.taxableValue)}
-                </td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "center" }}>{item.hsn}</td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "center" }}>
-                  {item.gstPercent}%
-                </td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
-                  {formatRs(item.cgst)}
-                  <br />
-                  <span style={{ fontSize: 9, color: "#666" }}>@{item.cgstPercent ?? DEFAULT_CGST_RATE}%</span>
-                </td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
-                  {formatRs(item.sgst)}
-                  <br />
-                  <span style={{ fontSize: 9, color: "#666" }}>@{item.sgstPercent ?? DEFAULT_SGST_RATE}%</span>
-                </td>
-                <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
-                  {formatRs(item.total)}
-                </td>
-              </tr>
-            ))}
+            {items.map((item, index) => {
+              const taxItem = taxItems[index] ?? item;
+              return (
+                <tr key={`${item.name}-${item.rate}-${item.quantity}-${index}`}>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px" }}>{item.name}</td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "center" }}>{item.quantity}</td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
+                    {item.originalRate && item.originalRate !== item.rate ? (
+                      <>
+                        <span style={{ textDecoration: "line-through" }}>Rs. {item.originalRate.toFixed(2)}</span> Rs.{" "}
+                        {item.rate.toFixed(2)}
+                      </>
+                    ) : (
+                      <>Rs. {item.rate.toFixed(2)}</>
+                    )}
+                  </td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
+                    {formatRs(taxItem.taxableValue)}
+                  </td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "center" }}>{item.hsn}</td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "center" }}>
+                    {item.gstPercent}%
+                  </td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
+                    {formatRs(taxItem.cgst)}
+                    <br />
+                    <span style={{ fontSize: 9, color: "#666" }}>@{item.cgstPercent ?? DEFAULT_CGST_RATE}%</span>
+                  </td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
+                    {formatRs(taxItem.sgst)}
+                    <br />
+                    <span style={{ fontSize: 9, color: "#666" }}>@{item.sgstPercent ?? DEFAULT_SGST_RATE}%</span>
+                  </td>
+                  <td style={{ border: "1px solid #000", padding: "4px 6px", textAlign: "right" }}>
+                    {formatRs(item.total)}
+                  </td>
+                </tr>
+              );
+            })}
             {/* Total row */}
             <tr style={{ fontWeight: "bold" }}>
               <td style={{ border: "1px solid #000", padding: "4px 6px" }}>Total</td>
@@ -603,7 +615,7 @@ export default function InvoicePdfView({ invoice, onBack }: InvoicePdfViewProps)
                         string,
                         { cgstRate: number; sgstRate: number; cgst: number; sgst: number }
                       >();
-                      for (const it of items) {
+                      for (const it of taxItems) {
                         const key = it.hsn;
                         const existing = hsnMap.get(key);
                         if (existing) {

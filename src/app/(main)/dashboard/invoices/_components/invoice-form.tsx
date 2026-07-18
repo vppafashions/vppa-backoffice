@@ -17,8 +17,10 @@ import { getHsnCodes } from "@/lib/appwrite/hsn-codes";
 import { createInvoice, getNextInvoiceNumber, updateInvoice } from "@/lib/appwrite/invoices";
 import type { HsnCode, Invoice, InvoiceItem } from "@/lib/appwrite/types";
 import {
+  type BillDiscountMode,
   calculateInvoiceItem,
   calculateInvoiceTotals,
+  computeBillDiscountInr,
   DEFAULT_CGST_RATE,
   DEFAULT_HSN_CODE,
   DEFAULT_SGST_RATE,
@@ -107,7 +109,8 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
 
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ ...emptyItemRow }]);
   const [shippingAmount, setShippingAmount] = useState("0");
-  const [discount, setDiscount] = useState("0");
+  const [discountMode, setDiscountMode] = useState<BillDiscountMode>("flat");
+  const [discountInput, setDiscountInput] = useState("0");
   const [status, setStatus] = useState<Invoice["status"]>("draft");
   const [saving, setSaving] = useState(false);
   const [hsnCodes, setHsnCodes] = useState<HsnCode[]>([]);
@@ -144,7 +147,9 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
       setCustomerPin(invoice.customerPin || "");
       setCustomerState(invoice.customerState || "");
       setShippingAmount(String(invoice.shippingAmount || 0));
-      setDiscount(String(invoice.discount || 0));
+      // Schema only stores computed INR discount; restore as flat for editing.
+      setDiscountMode("flat");
+      setDiscountInput(String(invoice.discount || 0));
       setStatus(invoice.status);
 
       try {
@@ -203,13 +208,31 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
       ),
     );
 
-  const totals = calculateInvoiceTotals(
-    computedItems,
-    Number.parseFloat(shippingAmount) || 0,
-    Number.parseFloat(discount) || 0,
-  );
+  const shippingValue = Number.parseFloat(shippingAmount) || 0;
+  const itemsSubtotal = computedItems.reduce((sum, item) => sum + item.total, 0);
+  const discountInr = computeBillDiscountInr({
+    mode: discountMode,
+    value: Number.parseFloat(discountInput) || 0,
+    itemsSubtotal,
+    shippingAmount: shippingValue,
+  });
+  const totals = calculateInvoiceTotals(computedItems, shippingValue, discountInr);
 
   const formatRs = (amount: number) => `Rs. ${amount.toFixed(2)}`;
+
+  const discountInputLabel =
+    discountMode === "percentage"
+      ? "Discount (%)"
+      : discountMode === "finalPayable"
+        ? "Final payable (INR)"
+        : "Discount (INR)";
+
+  const discountHint =
+    discountMode === "percentage"
+      ? "Percent off item total (before shipping). GST is recalculated on the reduced amount."
+      : discountMode === "finalPayable"
+        ? "What the customer should pay including shipping. Discount and GST are auto-computed."
+        : "Flat bill discount. GST is recalculated on the reduced amount (pre-tax).";
 
   const handleSave = async () => {
     if (!invoiceNumber || !invoiceDate || !customerName || computedItems.length === 0) {
@@ -239,8 +262,8 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
         cgstAmount: totals.cgstAmount,
         sgstAmount: totals.sgstAmount,
         totalTax: totals.totalTax,
-        shippingAmount: Number.parseFloat(shippingAmount) || 0,
-        discount: Number.parseFloat(discount) || 0,
+        shippingAmount: shippingValue,
+        discount: totals.discount,
         grandTotal: totals.grandTotal,
         status,
       };
@@ -551,18 +574,55 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                 <Input type="number" value={shippingAmount} onChange={(e) => setShippingAmount(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Discount (INR)</Label>
-                <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+                <Label>Bill discount type</Label>
+                <SearchableSelect
+                  value={discountMode}
+                  onValueChange={(v) => {
+                    setDiscountMode(v as BillDiscountMode);
+                    setDiscountInput("0");
+                  }}
+                  options={[
+                    { value: "flat", label: "Flat (INR)" },
+                    { value: "percentage", label: "Percentage (%)" },
+                    { value: "finalPayable", label: "Final payable (INR)" },
+                  ]}
+                  placeholder="Select discount type"
+                  searchPlaceholder="Search..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{discountInputLabel}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  placeholder={discountMode === "percentage" ? "e.g. 10" : "e.g. 1500"}
+                />
+                <p className="text-muted-foreground text-xs">{discountHint}</p>
               </div>
             </div>
             <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
               <div className="flex justify-between text-sm">
-                <span>Total Discount:</span>
-                <span>{formatRs(Number.parseFloat(discount) || 0)}</span>
+                <span>Items subtotal:</span>
+                <span>{formatRs(totals.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Bill discount:</span>
+                <span>-{formatRs(totals.discount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total Amount before Tax:</span>
                 <span>{formatRs(totals.taxableAmount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>CGST:</span>
+                <span>{formatRs(totals.cgstAmount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>SGST:</span>
+                <span>{formatRs(totals.sgstAmount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total Tax Amount:</span>
@@ -574,7 +634,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
               </div>
               <div className="flex justify-between text-sm">
                 <span>Shipping Amount:</span>
-                <span>{formatRs(Number.parseFloat(shippingAmount) || 0)}</span>
+                <span>{formatRs(shippingValue)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Shipping CGST (0%):</span>
@@ -586,11 +646,11 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total Shipping:</span>
-                <span>{formatRs(Number.parseFloat(shippingAmount) || 0)}</span>
+                <span>{formatRs(shippingValue)}</span>
               </div>
               <div className="my-2 border-t" />
               <div className="flex justify-between font-bold text-lg">
-                <span>Total:</span>
+                <span>Final payable:</span>
                 <span>{formatRs(totals.grandTotal)}</span>
               </div>
             </div>
@@ -622,7 +682,7 @@ export default function InvoiceForm({ invoice, onSaved, onCancel }: InvoiceFormP
                   string,
                   { taxable: number; cgstRate: number; sgstRate: number; cgst: number; sgst: number }
                 >();
-                for (const item of computedItems) {
+                for (const item of totals.discountedItems) {
                   const key = item.hsn;
                   const existing = hsnMap.get(key);
                   if (existing) {
