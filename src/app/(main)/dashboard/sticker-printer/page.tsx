@@ -94,16 +94,19 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
   if (stickerSize === "50x50") {
     return (
       <div
-        className="sticker-unit"
+        className="sticker-unit sticker-unit-50"
         style={{
           width: "50mm",
           height: "50mm",
+          maxWidth: "50mm",
+          maxHeight: "50mm",
           border: "1px solid #ccc",
-          padding: "2mm",
+          padding: "1.2mm",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "flex-start",
+          gap: "0.6mm",
           fontFamily: "Arial, Helvetica, sans-serif",
           boxSizing: "border-box",
           pageBreakInside: "avoid",
@@ -116,17 +119,18 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "1.5mm",
+            gap: "1mm",
             width: "100%",
             justifyContent: "center",
+            flexShrink: 0,
           }}
         >
-          <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "22px", height: "22px", objectFit: "contain" }} />
+          <img src={VPPA_LOGO_DATA_URI} alt="VPPA" style={{ width: "14px", height: "14px", objectFit: "contain" }} />
           <span
             style={{
-              fontSize: "10pt",
+              fontSize: "7pt",
               fontWeight: 800,
-              letterSpacing: "0.5px",
+              letterSpacing: "0.3px",
               whiteSpace: "nowrap",
             }}
           >
@@ -141,16 +145,11 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
             width: "100%",
             alignItems: "center",
             justifyContent: "space-between",
-            marginTop: "0.5mm",
+            flexShrink: 0,
           }}
         >
           <div style={{ flex: 1, textAlign: "left" }}>
-            <div
-              style={{
-                fontSize: "12pt",
-                fontWeight: 800,
-              }}
-            >
+            <div style={{ fontSize: "9pt", fontWeight: 800, lineHeight: 1.1 }}>
               RS:
               {(product.originalPrice || product.price).toLocaleString("en-IN", {
                 minimumFractionDigits: 2,
@@ -159,20 +158,21 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
             </div>
           </div>
           <div style={{ flexShrink: 0 }}>
-            <QRCodeSVG value={productUrl} size={38} level="M" />
+            <QRCodeSVG value={productUrl} size={28} level="M" />
           </div>
         </div>
 
-        {/* Product Name */}
+        {/* Product Name — max 2 lines */}
         <div
           style={{
-            fontSize: "8pt",
+            fontSize: "6.5pt",
             fontWeight: 600,
             width: "100%",
             textAlign: "center",
-            lineHeight: 1.2,
+            lineHeight: 1.15,
             overflow: "hidden",
-            maxHeight: "20pt",
+            maxHeight: "15pt",
+            flexShrink: 0,
           }}
         >
           {product.name}
@@ -184,20 +184,26 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
             width: "100%",
             display: "flex",
             justifyContent: "center",
+            flexShrink: 0,
+            overflow: "hidden",
           }}
         >
-          <BarcodeSVG value={itemCode} width={1.5} height={30} fontSize={10} />
+          <BarcodeSVG value={itemCode} width={1.05} height={22} fontSize={7} />
         </div>
 
         {/* Sticker Labels */}
         {(product.stickerLabel1 || product.stickerLabel2) && (
           <div
             style={{
-              fontSize: "6pt",
+              fontSize: "5.5pt",
               fontWeight: 700,
               width: "100%",
               textAlign: "center",
-              lineHeight: 1.3,
+              lineHeight: 1.15,
+              flexShrink: 0,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
             }}
           >
             {product.stickerLabel1 && <span>{product.stickerLabel1}</span>}
@@ -213,10 +219,12 @@ function Sticker({ product, variant, stickerSize = "50x100" }: StickerProps) {
             width: "100%",
             justifyContent: "space-between",
             alignItems: "flex-end",
+            marginTop: "auto",
+            flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: "6pt", color: "#444", fontWeight: 600 }}>WWW.VPPAFASHIONS.COM</span>
-          <span style={{ fontSize: "6pt", fontWeight: 700 }}>MADE IN INDIA</span>
+          <span style={{ fontSize: "5pt", color: "#444", fontWeight: 600 }}>WWW.VPPAFASHIONS.COM</span>
+          <span style={{ fontSize: "5pt", fontWeight: 700 }}>MADE IN INDIA</span>
         </div>
       </div>
     );
@@ -549,8 +557,8 @@ export default function StickerPrinterPage() {
           body {
             margin: 0 !important;
             padding: 0 !important;
-            width: ${stickerSize === "50x50" ? "100mm" : "50mm"} !important;
-            height: ${stickerSize === "50x50" ? "50mm" : "100mm"} !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           body * {
             visibility: hidden;
@@ -563,7 +571,6 @@ export default function StickerPrinterPage() {
             position: absolute;
             left: 0;
             top: 0;
-            width: ${stickerSize === "50x50" ? "100mm" : "50mm"};
             margin: 0;
             padding: 0;
           }
@@ -572,31 +579,38 @@ export default function StickerPrinterPage() {
             padding: 0 !important;
             margin: 0 !important;
           }
-          /* Dual 50x50 roll: one row = two labels. Rotate the ROW once only. */
+          /*
+           * Dual 50x50 roll = 100mm wide × 50mm feed per row.
+           * NO transform/rotate — thermal drivers + rotate stretch content across labels.
+           */
           .sticker-row {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             width: 100mm !important;
             height: 50mm !important;
+            max-height: 50mm !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow: hidden !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            transform: rotate(180deg) !important;
-            transform-origin: center center !important;
+            transform: none !important;
           }
           .sticker-row:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
-          .sticker-row .sticker-unit {
+          .sticker-row .sticker-unit,
+          .sticker-row .sticker-unit-50 {
             flex: 0 0 50mm !important;
             width: 50mm !important;
+            min-width: 50mm !important;
             max-width: 50mm !important;
             height: 50mm !important;
+            min-height: 50mm !important;
             max-height: 50mm !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
@@ -604,21 +618,24 @@ export default function StickerPrinterPage() {
             break-inside: avoid !important;
             border: none !important;
             margin: 0 !important;
-            padding: 1.5mm !important;
-            /* Row already rotated — do not rotate units again */
+            padding: 1.2mm !important;
             transform: none !important;
             overflow: hidden !important;
             box-sizing: border-box !important;
+            justify-content: flex-start !important;
           }
           /* Tall 50x100: one sticker per page */
           .print-sheet > .sticker-unit {
+            width: 50mm !important;
+            height: 100mm !important;
+            max-height: 100mm !important;
             page-break-after: always !important;
             break-after: page !important;
             border: none !important;
             margin: 0 !important;
             padding: 2mm !important;
-            transform: rotate(180deg) !important;
-            transform-origin: center center !important;
+            overflow: hidden !important;
+            transform: none !important;
           }
           .print-sheet > .sticker-unit:last-child {
             page-break-after: auto !important;
@@ -626,7 +643,7 @@ export default function StickerPrinterPage() {
           }
           @page {
             size: ${stickerSize === "50x50" ? "100mm 50mm" : "50mm 100mm"};
-            margin: 0;
+            margin: 0 !important;
           }
         }
       `}</style>
@@ -657,6 +674,12 @@ export default function StickerPrinterPage() {
                   placeholder="Select size"
                   searchPlaceholder="Search..."
                 />
+                {stickerSize === "50x50" && (
+                  <p className="text-muted-foreground text-xs">
+                    Print settings: paper <strong>100 × 50 mm</strong>, margins <strong>None</strong>, scale{" "}
+                    <strong>100%</strong> (not Fit to page).
+                  </p>
+                )}
               </div>
 
               {/* Search by item code */}
