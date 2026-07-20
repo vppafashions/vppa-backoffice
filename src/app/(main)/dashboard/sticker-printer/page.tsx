@@ -545,6 +545,13 @@ export default function StickerPrinterPage() {
       {/* Print styles */}
       <style jsx global>{`
         @media print {
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: ${stickerSize === "50x50" ? "100mm" : "50mm"} !important;
+            height: ${stickerSize === "50x50" ? "50mm" : "100mm"} !important;
+          }
           body * {
             visibility: hidden;
           }
@@ -557,32 +564,54 @@ export default function StickerPrinterPage() {
             left: 0;
             top: 0;
             width: ${stickerSize === "50x50" ? "100mm" : "50mm"};
+            margin: 0;
+            padding: 0;
           }
           .print-sheet {
             display: block !important;
             padding: 0 !important;
+            margin: 0 !important;
           }
+          /* Dual 50x50 roll: one row = two labels. Rotate the ROW once only. */
           .sticker-row {
             display: flex !important;
             flex-direction: row !important;
+            flex-wrap: nowrap !important;
             width: 100mm !important;
             height: 50mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             page-break-after: always !important;
             break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             transform: rotate(180deg) !important;
             transform-origin: center center !important;
           }
           .sticker-row:last-child {
             page-break-after: auto !important;
+            break-after: auto !important;
           }
           .sticker-row .sticker-unit {
+            flex: 0 0 50mm !important;
+            width: 50mm !important;
+            max-width: 50mm !important;
+            height: 50mm !important;
+            max-height: 50mm !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             border: none !important;
             margin: 0 !important;
-            padding: 2mm !important;
+            padding: 1.5mm !important;
+            /* Row already rotated — do not rotate units again */
+            transform: none !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
           }
-          .sticker-unit {
+          /* Tall 50x100: one sticker per page */
+          .print-sheet > .sticker-unit {
             page-break-after: always !important;
             break-after: page !important;
             border: none !important;
@@ -591,8 +620,9 @@ export default function StickerPrinterPage() {
             transform: rotate(180deg) !important;
             transform-origin: center center !important;
           }
-          .sticker-unit:last-child {
+          .print-sheet > .sticker-unit:last-child {
             page-break-after: auto !important;
+            break-after: auto !important;
           }
           @page {
             size: ${stickerSize === "50x50" ? "100mm 50mm" : "50mm 100mm"};
