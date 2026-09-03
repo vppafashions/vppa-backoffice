@@ -441,7 +441,9 @@ function PrintSheet({ items, stickerSize }: { items: PrintItem[]; stickerSize: S
       }}
     >
       {stickers.map((s, i) => (
-        <Sticker key={`sticker-${i}`} product={s.product} variant={s.variant} stickerSize={stickerSize} />
+        <div key={`sticker-${i}`} className="sticker-page">
+          <Sticker product={s.product} variant={s.variant} stickerSize={stickerSize} />
+        </div>
       ))}
     </div>
   );
@@ -625,22 +627,29 @@ export default function StickerPrinterPage() {
             justify-content: flex-start !important;
           }
           /* Tall 50x100: one sticker per page */
-          .print-sheet > .sticker-unit {
+          .sticker-page {
             width: 50mm !important;
             height: 100mm !important;
+            min-height: 100mm !important;
             max-height: 100mm !important;
             page-break-after: always !important;
             break-after: page !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+          }
+          .sticker-page > .sticker-unit {
+            width: 50mm !important;
+            height: 100mm !important;
+            max-height: 100mm !important;
             border: none !important;
             margin: 0 !important;
             padding: 2mm !important;
             overflow: hidden !important;
-            /* The 50 × 100 mm stock is fed in the opposite direction by the
-             * label driver; compensate here without affecting the 50 × 50 roll. */
             transform: rotate(180deg) !important;
             transform-origin: center !important;
           }
-          .print-sheet > .sticker-unit:last-child {
+          .sticker-page:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
