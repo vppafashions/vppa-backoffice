@@ -441,7 +441,17 @@ function PrintSheet({ items, stickerSize }: { items: PrintItem[]; stickerSize: S
       }}
     >
       {stickers.map((s, i) => (
-        <div key={`sticker-${i}`} className="sticker-page">
+        <div
+          key={`sticker-${i}`}
+          className="sticker-row-tall"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            width: "50mm",
+            height: "100mm",
+            pageBreakAfter: "always",
+          }}
+        >
           <Sticker product={s.product} variant={s.variant} stickerSize={stickerSize} />
         </div>
       ))}
@@ -627,8 +637,13 @@ export default function StickerPrinterPage() {
             justify-content: flex-start !important;
           }
           /* Tall 50x100: one sticker per page */
-          .sticker-page {
+          .sticker-row-tall {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
             width: 50mm !important;
+            min-width: 50mm !important;
+            max-width: 50mm !important;
             height: 100mm !important;
             min-height: 100mm !important;
             max-height: 100mm !important;
@@ -637,21 +652,32 @@ export default function StickerPrinterPage() {
             margin: 0 !important;
             padding: 0 !important;
             overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            transform: none !important;
           }
-          .sticker-page > .sticker-unit {
+          .sticker-row-tall:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+          .sticker-row-tall .sticker-unit {
+            flex: 0 0 50mm !important;
             width: 50mm !important;
+            min-width: 50mm !important;
+            max-width: 50mm !important;
             height: 100mm !important;
+            min-height: 100mm !important;
             max-height: 100mm !important;
             border: none !important;
             margin: 0 !important;
             padding: 2mm !important;
             overflow: hidden !important;
-            transform: rotate(180deg) !important;
-            transform-origin: center !important;
-          }
-          .sticker-page:last-child {
-            page-break-after: auto !important;
-            break-after: auto !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            transform: none !important;
+            box-sizing: border-box !important;
           }
           @page {
             size: ${stickerSize === "50x50" ? "100mm 50mm" : "50mm 100mm"};
