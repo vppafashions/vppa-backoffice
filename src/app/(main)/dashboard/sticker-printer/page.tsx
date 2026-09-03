@@ -635,7 +635,10 @@ export default function StickerPrinterPage() {
             margin: 0 !important;
             padding: 2mm !important;
             overflow: hidden !important;
-            transform: none !important;
+            /* The 50 × 100 mm stock is fed in the opposite direction by the
+             * label driver; compensate here without affecting the 50 × 50 roll. */
+            transform: rotate(180deg) !important;
+            transform-origin: center !important;
           }
           .print-sheet > .sticker-unit:last-child {
             page-break-after: auto !important;
