@@ -661,6 +661,8 @@ export default function StickerPrinterPage() {
             break-after: auto !important;
           }
           .sticker-row-tall .sticker-unit {
+            display: flex !important;
+            flex-direction: column !important;
             flex: 0 0 50mm !important;
             width: 50mm !important;
             min-width: 50mm !important;
@@ -678,6 +680,8 @@ export default function StickerPrinterPage() {
             break-inside: avoid !important;
             transform: none !important;
             box-sizing: border-box !important;
+            align-items: center !important;
+            justify-content: space-between !important;
           }
           @page {
             size: ${stickerSize === "50x50" ? "100mm 50mm" : "50mm 100mm"};
