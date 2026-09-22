@@ -1,4 +1,5 @@
 import {
+  BadgeIndianRupee,
   FileText,
   Gauge,
   Hash,
@@ -61,6 +62,11 @@ export const sidebarItems: NavGroup[] = [
         title: "Products",
         url: "/dashboard/products",
         icon: ShoppingBag,
+      },
+      {
+        title: "Pricing CSV",
+        url: "/dashboard/pricing",
+        icon: BadgeIndianRupee,
       },
       {
         title: "Collections",
