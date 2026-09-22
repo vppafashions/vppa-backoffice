@@ -223,6 +223,8 @@ export default function PricingPage() {
       changedRows,
       changedCount: changedRows.length,
       unchangedCount: rows.length - changedRows.length,
+      sellingPriceChanges: rows.filter((row) => row.sellingDelta !== 0).length,
+      mrpChanges: rows.filter((row) => row.mrpDelta !== 0).length,
       sellingDelta: rows.reduce((sum, row) => sum + row.sellingDelta, 0),
       mrpDelta: rows.reduce((sum, row) => sum + row.mrpDelta, 0),
     };
@@ -479,6 +481,9 @@ export default function PricingPage() {
                 >
                   {formatDelta(pricingReview.sellingDelta)}
                 </p>
+                <p className="mt-1 text-muted-foreground text-xs">
+                  {pricingReview.sellingPriceChanges} field{pricingReview.sellingPriceChanges === 1 ? "" : "s"} changed
+                </p>
               </div>
               <div className="rounded-md border p-3">
                 <p className="text-muted-foreground text-xs">MRP impact</p>
@@ -492,6 +497,9 @@ export default function PricingPage() {
                   }
                 >
                   {formatDelta(pricingReview.mrpDelta)}
+                </p>
+                <p className="mt-1 text-muted-foreground text-xs">
+                  {pricingReview.mrpChanges} field{pricingReview.mrpChanges === 1 ? "" : "s"} changed
                 </p>
               </div>
             </div>
