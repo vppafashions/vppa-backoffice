@@ -2,7 +2,16 @@
 
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { BadgeIndianRupee, CheckCircle2, Download, FileSpreadsheet, RefreshCw, Upload, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeIndianRupee,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  RefreshCw,
+  Upload,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +48,15 @@ interface UploadState {
   errors: string[];
 }
 
+interface PricingReviewRow {
+  update: ValidatedUpdate;
+  currentSellingPrice: number;
+  currentMrp: number;
+  sellingDelta: number;
+  mrpDelta: number;
+  hasChanges: boolean;
+}
+
 const emptyUpload: UploadState = {
   fileName: "",
   totalRows: 0,
@@ -57,6 +75,11 @@ function formatCurrency(value: number): string {
     currency: "INR",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatDelta(value: number): string {
+  if (value === 0) return "No change";
+  return `${value > 0 ? "+" : "−"}${formatCurrency(Math.abs(value))}`;
 }
 
 async function loadAllProducts(): Promise<Product[]> {
@@ -179,6 +202,32 @@ export default function PricingPage() {
       .sort((a, b) => (a.itemCode || a.name).localeCompare(b.itemCode || b.name, undefined, { numeric: true }));
   }, [collectionFilter, genderFilter, products, search]);
 
+  const pricingReview = useMemo(() => {
+    const rows: PricingReviewRow[] = upload.updates.map((update) => {
+      const current = productToPricingRow(update.product);
+      const sellingDelta = update.sellingPrice - current.sellingPrice;
+      const mrpDelta = update.mrp - current.mrp;
+      return {
+        update,
+        currentSellingPrice: current.sellingPrice,
+        currentMrp: current.mrp,
+        sellingDelta,
+        mrpDelta,
+        hasChanges: sellingDelta !== 0 || mrpDelta !== 0,
+      };
+    });
+    const changedRows = rows.filter((row) => row.hasChanges);
+
+    return {
+      rows,
+      changedRows,
+      changedCount: changedRows.length,
+      unchangedCount: rows.length - changedRows.length,
+      sellingDelta: rows.reduce((sum, row) => sum + row.sellingDelta, 0),
+      mrpDelta: rows.reduce((sum, row) => sum + row.mrpDelta, 0),
+    };
+  }, [upload.updates]);
+
   const downloadCsv = () => {
     const csv = pricingRowsToCsv(filteredProducts.map(productToPricingRow));
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -221,22 +270,23 @@ export default function PricingPage() {
   };
 
   const applyUpload = async () => {
-    if (upload.errors.length > 0 || upload.updates.length === 0) return;
+    const updatesToApply = pricingReview.changedRows;
+    if (upload.errors.length > 0 || updatesToApply.length === 0) return;
     setUploading(true);
     setUploadedCount(0);
 
     try {
-      for (let index = 0; index < upload.updates.length; index += UPDATE_BATCH_SIZE) {
-        const batch = upload.updates.slice(index, index + UPDATE_BATCH_SIZE);
+      for (let index = 0; index < updatesToApply.length; index += UPDATE_BATCH_SIZE) {
+        const batch = updatesToApply.slice(index, index + UPDATE_BATCH_SIZE);
         await Promise.all(
-          batch.map(({ product, sellingPrice, mrp }) =>
-            updateProduct(product.$id, { price: sellingPrice, originalPrice: mrp }),
+          batch.map(({ update }) =>
+            updateProduct(update.product.$id, { price: update.sellingPrice, originalPrice: update.mrp }),
           ),
         );
-        setUploadedCount(Math.min(index + batch.length, upload.updates.length));
+        setUploadedCount(Math.min(index + batch.length, updatesToApply.length));
       }
 
-      toast.success(`Updated ${upload.updates.length} product prices`);
+      toast.success(`Updated ${updatesToApply.length} product prices`);
       setUpload(emptyUpload);
       await fetchProducts();
     } catch (error) {
@@ -298,7 +348,11 @@ export default function PricingPage() {
           <CardHeader className="pb-2">
             <CardDescription>Upload status</CardDescription>
             <CardTitle className="text-2xl">
-              {uploading ? `${uploadedCount}/${upload.updates.length}` : upload.updates.length || "—"}
+              {uploading
+                ? `${uploadedCount}/${pricingReview.changedCount}`
+                : upload.fileName
+                  ? `${pricingReview.changedCount}/${upload.updates.length}`
+                  : "—"}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
@@ -348,10 +402,14 @@ export default function PricingPage() {
             </div>
             <Button
               onClick={() => void applyUpload()}
-              disabled={uploading || upload.errors.length > 0 || upload.updates.length === 0}
+              disabled={uploading || upload.errors.length > 0 || pricingReview.changedCount === 0}
             >
               <Upload />
-              {uploading ? `Updating ${uploadedCount}/${upload.updates.length}…` : "Apply prices"}
+              {uploading
+                ? `Updating ${uploadedCount}/${pricingReview.changedCount}…`
+                : pricingReview.changedCount > 0
+                  ? `Apply ${pricingReview.changedCount} changes`
+                  : "No changes to apply"}
             </Button>
             {upload.fileName && (
               <Button variant="ghost" onClick={clearUpload} disabled={uploading}>
@@ -364,7 +422,8 @@ export default function PricingPage() {
             <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
               <CheckCircle2 className="size-4 text-emerald-600" />
               <span>
-                {upload.fileName}: {upload.updates.length} of {upload.totalRows} rows are ready to update.
+                {upload.fileName}: {pricingReview.changedCount} price changes found across {upload.totalRows} rows.
+                Review the comparison below before applying.
               </span>
             </div>
           )}
@@ -384,6 +443,139 @@ export default function PricingPage() {
           )}
         </CardContent>
       </Card>
+
+      {upload.fileName && upload.errors.length === 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Review price changes</CardTitle>
+            <CardDescription>
+              No product is updated until you click Apply. Old values are compared with the CSV values.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-md border p-3">
+                <p className="text-muted-foreground text-xs">Rows reviewed</p>
+                <p className="mt-1 font-semibold text-lg">{pricingReview.rows.length}</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-muted-foreground text-xs">Products changing</p>
+                <p className="mt-1 font-semibold text-lg">{pricingReview.changedCount}</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-muted-foreground text-xs">Unchanged</p>
+                <p className="mt-1 font-semibold text-lg">{pricingReview.unchangedCount}</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-muted-foreground text-xs">Selling Price impact</p>
+                <p
+                  className={
+                    pricingReview.sellingDelta > 0
+                      ? "mt-1 font-semibold text-emerald-600"
+                      : pricingReview.sellingDelta < 0
+                        ? "mt-1 font-semibold text-destructive"
+                        : "mt-1 font-semibold"
+                  }
+                >
+                  {formatDelta(pricingReview.sellingDelta)}
+                </p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-muted-foreground text-xs">MRP impact</p>
+                <p
+                  className={
+                    pricingReview.mrpDelta > 0
+                      ? "mt-1 font-semibold text-emerald-600"
+                      : pricingReview.mrpDelta < 0
+                        ? "mt-1 font-semibold text-destructive"
+                        : "mt-1 font-semibold"
+                  }
+                >
+                  {formatDelta(pricingReview.mrpDelta)}
+                </p>
+              </div>
+            </div>
+
+            {pricingReview.changedCount === 0 ? (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                Every uploaded price matches the current catalog. Nothing will be written.
+              </div>
+            ) : (
+              <div className="max-h-[32rem] overflow-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item Code</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Gender / Collection</TableHead>
+                      <TableHead>Selling Price</TableHead>
+                      <TableHead>MRP</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pricingReview.rows.map((review) => {
+                      const { product, sellingPrice, mrp } = review.update;
+                      return (
+                        <TableRow key={`${product.$id}-${review.update.row.rowNumber}`}>
+                          <TableCell className="font-medium">{product.itemCode || "—"}</TableCell>
+                          <TableCell>
+                            <div className="max-w-56 truncate font-medium">{product.name}</div>
+                            <div className="max-w-56 truncate text-muted-foreground text-xs">
+                              {product.sku || product.$id}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>{product.gender || "Unisex"}</div>
+                            <div className="text-muted-foreground text-xs capitalize">
+                              {displayCollection(product.collectionSlug) || "—"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 whitespace-nowrap">
+                              <span
+                                className={
+                                  review.sellingDelta === 0
+                                    ? "text-muted-foreground"
+                                    : "text-muted-foreground line-through"
+                                }
+                              >
+                                {formatCurrency(review.currentSellingPrice)}
+                              </span>
+                              <ArrowRight className="size-3 text-muted-foreground" />
+                              <span className="font-medium">{formatCurrency(sellingPrice)}</span>
+                            </div>
+                            <div className="text-muted-foreground text-xs">{formatDelta(review.sellingDelta)}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 whitespace-nowrap">
+                              <span
+                                className={
+                                  review.mrpDelta === 0 ? "text-muted-foreground" : "text-muted-foreground line-through"
+                                }
+                              >
+                                {formatCurrency(review.currentMrp)}
+                              </span>
+                              <ArrowRight className="size-3 text-muted-foreground" />
+                              <span className="font-medium">{formatCurrency(mrp)}</span>
+                            </div>
+                            <div className="text-muted-foreground text-xs">{formatDelta(review.mrpDelta)}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={review.hasChanges ? "default" : "outline"}>
+                              {review.hasChanges ? "Changes" : "No change"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
